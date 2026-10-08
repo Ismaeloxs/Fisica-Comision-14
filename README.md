@@ -12,8 +12,8 @@
 ### 1. Clonar el repositorio
 Clonar el repo con
 ```bash
-git clone https://github.com/TU-USUARIO/agente-rozamiento.git
-cd agente-rozamiento
+git clone https://github.com/Ismaeloxs/Fisica-Comision-14.git
+cd Fisica-Comision-14
 ```
 ### 2. Activar entorno
 En la carpeta del repo ejecutar
