@@ -1,8 +1,5 @@
 # Arquitectura del agente — Fuerza de rozamiento (Grupo 14)
 
-> **Estado: borrador para debatir.** Nada de esto está decidido. La sección
-> [Decisiones abiertas](#11-decisiones-abiertas) es la agenda de la reunión.
-
 ## 1. Qué tenemos que entregar
 
 Somos el **agente** del movimiento 1 (fuerza de rozamiento). El Grupo 3 monta el
