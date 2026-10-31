@@ -1,0 +1,82 @@
+{
+  "_fuente": "Anotaciones videos.docx (Grupo 3) + fotos manuscritas embebidas en el docx",
+  "_extraido": "2026-10-31",
+  "_nota": "Los angulos NO estaban como texto en el docx: estaban en 4 fotos de anotaciones a mano. Los valores de abajo son las mediciones crudas leidas de esas fotos. Los angulos se DERIVAN en src/agente/referencia.py, no se hardcodean.",
+
+  "geometria": {
+    "hipotenusa_cm": 42.0,
+    "sigma_hipotenusa_cm": 0.1,
+    "_nota": "Largo del plano inclinado. Verificado: reproduce los tres angulos manuscritos al cuarto decimal."
+  },
+
+  "calibracion_espacial": {
+    "patron": "papel rosa",
+    "largo_cm": 7.5,
+    "sigma_largo_cm": 0.1,
+    "_nota": "Unico objeto de tamano conocido en cuadro. Es la referencia px/m. CONFIRMAR con Grupo 3 que este en el plano del movimiento y no contra el fondo."
+  },
+
+  "fps_declarado": 120,
+  "_nota_fps": "Declarado por el Grupo 3. NO asumido como real: se verifica por video en el inventario.",
+
+  "objetos": {
+    "objeto_1": {
+      "nombre": "tapa",
+      "alias": ["tapita", "Tapa"],
+      "masa_g": 5.0,
+      "sigma_masa_g": 0.5,
+      "altura_inicio_movimiento_cm": 11.8,
+      "sigma_altura_cm": 0.1
+    },
+    "objeto_2": {
+      "nombre": "esponja",
+      "alias": ["Esponja"],
+      "masa_g": 3.0,
+      "sigma_masa_g": 0.5,
+      "altura_inicio_movimiento_cm": 10.3,
+      "sigma_altura_cm": 0.1
+    },
+    "objeto_3": {
+      "nombre": "jabon",
+      "alias": ["Jabon", "Jabón"],
+      "masa_g": 116.0,
+      "sigma_masa_g": 0.5,
+      "altura_inicio_movimiento_cm": 12.9,
+      "sigma_altura_cm": 0.1
+    }
+  },
+
+  "angulos": {
+    "angulo_1": {
+      "descripcion": "4 libros apilados",
+      "altura_cm": 23.7,
+      "sigma_altura_cm": 0.1,
+      "_manuscrito": "altura = 15 + 8.7 = 23.7 ; sen(a) = 23.7/42 ; a = 34,3527047"
+    },
+    "angulo_2": {
+      "descripcion": "3 libros apilados",
+      "altura_cm": 17.5,
+      "sigma_altura_cm": 0.1,
+      "_manuscrito": "sen(a) = 17,5/42 = 5/12 ; a = arcsen(5/12) = 24,6243183"
+    },
+    "angulo_3": {
+      "descripcion": "2 libros apilados",
+      "altura_cm": 14.5,
+      "sigma_altura_cm": 0.1,
+      "_manuscrito": "altura = 14,5 ; sen(a) = 14,5/42 ; a = 20,1963306"
+    }
+  },
+
+  "_inconsistencia_detectada": {
+    "que": "Los saltos de altura entre angulos no son uniformes: 2->3 libros suma 3.0 cm, 3->4 libros suma 6.2 cm.",
+    "por_que_importa": "Si los libros son de espesor similar, uno de los tres valores esta mal. La regresion de mu tiene solo 3 puntos: un angulo erroneo desplaza la pendiente directamente.",
+    "sospecha": "El manuscrito de 4 libros dice '15 + 8.7', una suma que los otros dos no tienen. Puede ser que ahi se haya medido distinto o se haya agregado un apoyo.",
+    "accion": "PREGUNTAR AL GRUPO 3 antes de cerrar la regresion. Si no se resuelve, va a la seccion de limitaciones."
+  },
+
+  "sigmas_asumidos": {
+    "_nota": "El Grupo 3 no reporto incertezas. Los sigma de arriba son ASUMIDOS por nosotros y hay que confirmarlos.",
+    "criterio_longitudes": "0.1 cm = resolucion tipica de una regla de taller leida a ojo",
+    "criterio_masas": "0.5 g = resolucion de balanza de cocina. CONFIRMAR que balanza usaron: con 3 g y sigma 0.5 g, la masa de la esponja tiene 17% de error."
+  }
+}

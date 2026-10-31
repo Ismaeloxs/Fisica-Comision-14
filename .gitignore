@@ -11,6 +11,18 @@ videos/*
 resultados/*
 dataset/*
 models/*
+datos/*
+!datos/.gitkeep
+# los datos del laboratorio son fuente, no salida generada: van al repo
+!datos/referencia/
+
+# Videos del laboratorio (Grupo 3) - ~1 GB, se comparten aparte
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.avi
+*.AVI
 
 # OS
 .DS_Store
