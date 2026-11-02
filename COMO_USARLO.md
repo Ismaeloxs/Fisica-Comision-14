@@ -139,7 +139,7 @@ la lista, uno por uno, mostrando el avance abajo.
 | **Resumen** | Los números en cuatro tarjetas — calibración, seguimiento, cinemática, física — y el veredicto en un cartel de color con sus advertencias. |
 | **Gráficos** | s(t) con el ajuste encima, los residuos contra la banda de ±σ, y v(t) y a(t) crudas contra filtradas. La comparación crudo-vs-filtrado que pide la consigna, hecha. |
 | **Trayectoria** | Un cuadro del video con las detecciones dibujadas: en verde lo que entra al ajuste, en blanco lo descartado, y el eje sobre el que se proyecta s(t). Es la forma rápida de confirmar que el tracker siguió el objeto y no un reflejo o un libro. |
-| **Lote** | Una fila por repetición y, abajo, la dispersión entre ellas con su gráfico. Esa dispersión es el número honesto del experimento; el error del ajuste individual es entre tres y seis veces menor. |
+| **Lote** | Arranca vacía: se llena cuando apretás **Medir todo el grupo filtrado**, con una fila por repetición y, abajo, la dispersión entre ellas con su gráfico. Esa dispersión es el número honesto del experimento; el error del ajuste individual es entre tres y seis veces menor. Las corridas cuya ventana útil quedó demasiado corta (menos de 25 puntos o menos de 10 cm de recorrido) salen en amarillo: entran al promedio igual, pero conviene mirarlas antes de confiar en él. |
 | **Texto** | El mismo informe que imprime la consola, para copiar y pegar. |
 
 Un video que falla no corta nada: sale un cartel con el motivo, y dentro de un

@@ -57,6 +57,14 @@ COLOR_VEREDICTO = {
     "rodadura": ("#e9f0fb", "#1c4f9c"),
 }
 
+# Una medicion completa lee todos los cuadros del video. Sirve para avisar
+# cuanto va a tardar un lote antes de largarlo.
+SEGUNDOS_POR_VIDEO = 6
+# Debajo de esto la corrida aporta poco: la ventana util quedo demasiado corta
+# para que el ajuste cuadratico signifique algo.
+MIN_PUNTOS_CONFIABLE = 25
+MIN_RECORRIDO_CM = 10.0
+
 OBJETOS = ["todos", "tapa", "esponja", "jabon"]
 CONDICIONES = ["todas", "4libros", "3libros", "2libros", "angulo critico"]
 
@@ -359,6 +367,7 @@ class Visor(tk.Tk):
             )
         self.tabla.pack(fill="x")
         self.tabla.tag_configure("error", foreground="#a62121")
+        self.tabla.tag_configure("flojo", background="#fdf4e3")
 
         self.resumen_lote = ttk.Label(
             self.tab_lote, text="", style="Barra.TLabel", font=("Segoe UI", 10)
@@ -368,6 +377,22 @@ class Visor(tk.Tk):
         self.fig_lote = Figure(figsize=(9, 3.4), dpi=96, facecolor=FONDO)
         self.canvas_lote = FigureCanvasTkAgg(self.fig_lote, master=self.tab_lote)
         self.canvas_lote.get_tk_widget().pack(fill="both", expand=True)
+
+    def _mensaje_lote_vacio(self) -> None:
+        """La tabla vacia no se explica sola: sin esto parece que algo fallo."""
+        n = len(getattr(self, "videos", []))
+        if not n:
+            self.resumen_lote.configure(text="No hay videos en la lista para medir.")
+            return
+        segundos = SEGUNDOS_POR_VIDEO * n
+        cuanto = f"{segundos} s" if segundos < 90 else f"~{round(segundos / 60)} min"
+        self.resumen_lote.configure(
+            text=(
+                f"Todavia no corriste ningun lote. El boton "
+                f"'Medir todo el grupo filtrado' mide los {n} videos de la lista "
+                f"y tarda {cuanto}; las filas van apareciendo a medida que terminan."
+            )
+        )
 
     def _barra_estado(self) -> None:
         barra = ttk.Frame(self, padding=(12, 6))
@@ -426,6 +451,8 @@ class Visor(tk.Tk):
         else:
             self.lista.selection_set(0)
             self.var_estado.set(f"{len(self.videos)} videos en la lista")
+        if not self.resultados_lote:
+            self._mensaje_lote_vacio()
 
     def _elegir_carpeta(self) -> None:
         elegida = filedialog.askdirectory(
@@ -471,6 +498,16 @@ class Visor(tk.Tk):
         if not rutas:
             messagebox.showinfo("Sin videos", "El filtro no deja ningun video.")
             return
+        if len(rutas) > 20:
+            minutos = round(SEGUNDOS_POR_VIDEO * len(rutas) / 60)
+            seguir = messagebox.askyesno(
+                "Lote largo",
+                f"Vas a medir {len(rutas)} videos. Va a tardar unos "
+                f"{minutos} minutos.\n\n"
+                "Podes achicarlo filtrando por objeto y condicion. Seguir igual?",
+            )
+            if not seguir:
+                return
         self.resultados_lote = []
         self.tabla.delete(*self.tabla.get_children())
         self.resumen_lote.configure(text="")
@@ -805,9 +842,11 @@ class Visor(tk.Tk):
             return
         c = medida.corrida
         mu = c.diagnostico.mu_d_si_desliza if c.diagnostico else None
+        floja = len(c.t) < MIN_PUNTOS_CONFIABLE or c.recorrido_cm < MIN_RECORRIDO_CM
         self.tabla.insert(
             "",
             tk.END,
+            tags=("flojo",) if floja else (),
             values=(
                 c.ruta.stem,
                 len(c.t),
@@ -843,6 +882,16 @@ class Visor(tk.Tk):
         )
         if fallidas:
             texto += f"   —  {fallidas} corrida(s) no se pudieron medir"
+        flojas = [
+            c
+            for c in buenas
+            if len(c.t) < MIN_PUNTOS_CONFIABLE or c.recorrido_cm < MIN_RECORRIDO_CM
+        ]
+        if flojas:
+            texto += (
+                f"   —  {len(flojas)} en amarillo: ventana demasiado corta, "
+                f"conviene mirarlas antes de promediar"
+            )
         self.resumen_lote.configure(text=texto)
 
         self.fig_lote.clear()
