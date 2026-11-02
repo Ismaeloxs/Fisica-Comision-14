@@ -112,6 +112,45 @@ def _medir_en_hilo(ruta: Path) -> Medida:
     return Medida(corrida, _leer_cuadro(corrida), nombre=ruta.name)
 
 
+class MarcoScrollable(ttk.Frame):
+    """Marco con scroll vertical. El contenido se cuelga de .interior.
+
+    Hace falta porque el resumen no entra en pantallas chicas: en un portatil
+    de 768 px de alto las tarjetas se cortan y el cartel del veredicto, que es
+    la conclusion, queda abajo del borde sin que nada lo avise.
+    """
+
+    def __init__(self, padre):
+        super().__init__(padre)
+        self._lienzo = tk.Canvas(self, background=FONDO, highlightthickness=0)
+        barra = ttk.Scrollbar(self, orient="vertical", command=self._lienzo.yview)
+        self.interior = ttk.Frame(self._lienzo, padding=12)
+        self._ventana = self._lienzo.create_window((0, 0), window=self.interior, anchor="nw")
+        self._lienzo.configure(yscrollcommand=barra.set)
+        self._lienzo.pack(side="left", fill="both", expand=True)
+        barra.pack(side="right", fill="y")
+
+        self.interior.bind(
+            "<Configure>",
+            lambda _e: self._lienzo.configure(scrollregion=self._lienzo.bbox("all")),
+        )
+        self._lienzo.bind(
+            "<Configure>", lambda e: self._lienzo.itemconfigure(self._ventana, width=e.width)
+        )
+        # La rueda se engancha solo mientras el puntero esta encima, si no se
+        # roba el scroll de las otras pestanias.
+        self._lienzo.bind("<Enter>", lambda _e: self._lienzo.bind_all("<MouseWheel>", self._rueda))
+        self._lienzo.bind("<Leave>", lambda _e: self._lienzo.unbind_all("<MouseWheel>"))
+
+    def _rueda(self, evento) -> None:
+        self._lienzo.yview_scroll(-evento.delta // 120, "units")
+
+    def limpiar(self) -> None:
+        for hijo in self.interior.winfo_children():
+            hijo.destroy()
+        self._lienzo.yview_moveto(0.0)
+
+
 class Tarjeta(ttk.Frame):
     """Un bloque de pares etiqueta-valor, con titulo."""
 
@@ -144,8 +183,10 @@ class Visor(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Agente de fuerza de rozamiento - Grupo 14")
-        self.geometry("1360x880")
-        self.minsize(1100, 700)
+        ancho = min(1360, self.winfo_screenwidth() - 80)
+        alto = min(880, self.winfo_screenheight() - 120)
+        self.geometry(f"{ancho}x{alto}")
+        self.minsize(900, 560)
         self.configure(background=FONDO)
 
         self.carpeta = CARPETA_VIDEOS
@@ -255,13 +296,15 @@ class Visor(tk.Tk):
         self.pestanias = ttk.Notebook(padre)
         self.pestanias.pack(side="left", fill="both", expand=True)
 
-        self.tab_resumen = ttk.Frame(self.pestanias, padding=12)
+        self.tab_resumen = ttk.Frame(self.pestanias)
         self.tab_graficos = ttk.Frame(self.pestanias)
         self.tab_trayectoria = ttk.Frame(self.pestanias)
         self.tab_lote = ttk.Frame(self.pestanias, padding=12)
         self.tab_texto = ttk.Frame(self.pestanias)
 
         self.pestanias.add(self.tab_resumen, text="  Resumen  ")
+        self.resumen = MarcoScrollable(self.tab_resumen)
+        self.resumen.pack(fill="both", expand=True)
         self.pestanias.add(self.tab_graficos, text="  Graficos  ")
         self.pestanias.add(self.tab_trayectoria, text="  Trayectoria  ")
         self.pestanias.add(self.tab_lote, text="  Lote  ")
@@ -335,9 +378,8 @@ class Visor(tk.Tk):
         self.progreso.pack(side="right")
 
     def _mensaje_inicial(self) -> None:
-        for hijo in self.tab_resumen.winfo_children():
-            hijo.destroy()
-        marco = ttk.Frame(self.tab_resumen)
+        self.resumen.limpiar()
+        marco = ttk.Frame(self.resumen.interior)
         marco.pack(expand=True)
         ttk.Label(
             marco,
@@ -479,10 +521,9 @@ class Visor(tk.Tk):
         self.var_estado.set(f"{medida.nombre}: a = {medida.corrida.aceleracion:.3f} m/s^2")
 
     def _pintar_resumen(self, c) -> None:
-        for hijo in self.tab_resumen.winfo_children():
-            hijo.destroy()
+        self.resumen.limpiar()
 
-        encabezado = ttk.Frame(self.tab_resumen)
+        encabezado = ttk.Frame(self.resumen.interior)
         encabezado.pack(fill="x", pady=(0, 10))
         ttk.Label(encabezado, text=c.ruta.stem, font=("Segoe UI", 15, "bold")).pack(side="left")
         ttk.Label(
@@ -492,7 +533,7 @@ class Visor(tk.Tk):
             font=("Segoe UI", 10),
         ).pack(side="left", pady=(5, 0))
 
-        grilla = ttk.Frame(self.tab_resumen)
+        grilla = ttk.Frame(self.resumen.interior)
         grilla.pack(fill="both", expand=True)
         grilla.columnconfigure(0, weight=1, uniform="col")
         grilla.columnconfigure(1, weight=1, uniform="col")
@@ -572,9 +613,33 @@ class Visor(tk.Tk):
             )
         fis.grid(row=1, column=1, sticky="nsew", padx=(6, 0))
 
+        libre = Tarjeta(grilla, "Diagrama de cuerpo libre")
+        libre.agregar("masa", f"{1000 * c.masa_kg.n:.0f} ± {1000 * c.masa_kg.s:.0f} g")
+        if c.diagnostico is None or c.diagnostico.fuerzas is None:
+            libre.nota(
+                "Las fuerzas necesitan un theta fijo. En una corrida de angulo critico "
+                "el plano se levanta mientras se filma, asi que no hay uno."
+            )
+        else:
+            f = c.diagnostico.fuerzas
+            for etiqueta, fuerza in (
+                ("peso  P = m·g", f.peso),
+                ("normal  N = P·cosθ", f.normal),
+                ("paralela  P·senθ", f.paralela),
+                ("rozamiento  f = m(g·senθ − a)", f.rozamiento),
+            ):
+                libre.agregar(etiqueta, f"{1000 * fuerza.n:.2f} ± {1000 * fuerza.s:.2f} mN")
+            libre.agregar("control  f / N", f"{f.mu_de_fuerzas.n:.4f}")
+            libre.nota(
+                "f/N no depende de la masa: se simplifica. Que de igual que el mu dinamico "
+                "de arriba es el control de que el planteo de fuerzas cierra. La incerteza "
+                "de las fuerzas la domina la masa, que esta medida al gramo."
+            )
+        libre.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=(10, 0))
+
         if c.diagnostico is not None:
             fondo, frente = _color_veredicto(c.diagnostico.veredicto)
-            cartel = tk.Frame(self.tab_resumen, background=fondo, highlightthickness=0)
+            cartel = tk.Frame(self.resumen.interior, background=fondo, highlightthickness=0)
             cartel.pack(fill="x", pady=(12, 0))
             tk.Label(
                 cartel,

@@ -271,13 +271,31 @@ Para la tapa pasa exactamente eso, y es el hallazgo central hasta ahora:
 probablemente **rueda**, no desliza. Está desarrollado en
 [hallazgos.md §3](hallazgos.md).
 
+```
+  CUERPO LIBRE (m = 5 +/- 1 g):
+    peso        P = m g           =   49.05 +/- 9.81 mN
+    normal      N = P cos@        =   40.49 +/- 8.10 mN
+    paralela    P sen@            =   27.68 +/- 5.54 mN
+    rozamiento  f = m(g sen@ - a) =   16.49 +/- 3.32 mN
+    control     f/N = 0.4073 (debe coincidir con mu_dinamico)
+```
+
+Las fuerzas del diagrama de cuerpo libre, que la consigna pide reportar. La
+masa entra como factor común en las tres, así que su incerteza las domina: con
+la esponja de 3 ± 1 g las fuerzas salen con 33 % de error.
+
+**El `control f/N` es el que importa mirar.** Ese cociente no depende de la
+masa, porque se simplifica, así que tiene que dar exactamente el mismo μ que se
+despeja de la cinemática. Si alguna vez no coinciden, hay un error de signo en
+el planteo.
+
 ---
 
 ## 6. Qué se puede ajustar y dónde
 
 | Qué | Dónde | Nota |
 |---|---|---|
-| Medidas del laboratorio (alturas, masas, hipotenusa, σ) | [`datos/referencia/laboratorio.json`](datos/referencia/laboratorio.json) | Único lugar donde se tocan. Los ángulos se **derivan**, no se escriben a mano. |
+| Medidas del laboratorio (alturas, masas, hipotenusa, σ) | [`datos/referencia/laboratorio.json`](datos/referencia/laboratorio.json) | Único lugar donde se tocan. Los ángulos se **derivan**, no se escriben a mano. Criterio de la cátedra para los σ: una unidad en la última cifra significativa de lo anotado — longitudes con un decimal → 0,1 cm; masas en gramos enteros → 1 g. |
 | Rangos HSV de cada objeto | `PERFILES` en [`tracking.py`](src/agente/tracking.py) | Los umbrales salieron de muestrear el objeto en el cuadro 0, no son arbitrarios. |
 | Color y tamaño del papel de calibración | `HSV_ROSA_*`, `LARGO_PAPEL_CM` en [`calibracion.py`](src/agente/calibracion.py) | |
 | Carpetas donde se buscan los videos | `CARPETAS_POSIBLES` en [`inventario.py`](src/agente/inventario.py) | Se usa la primera que exista. `--carpeta` la pisa. Ver §3. |

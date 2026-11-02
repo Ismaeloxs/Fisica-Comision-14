@@ -55,6 +55,49 @@ def mu_estatico_de_angulo_critico(theta_critico: Variable) -> Variable:
     return umath.tan(theta_critico)
 
 
+@dataclass
+class Fuerzas:
+    """Las fuerzas del diagrama de cuerpo libre sobre el plano inclinado.
+
+    Ejes: x a lo largo del plano (positivo pendiente abajo), y perpendicular.
+
+        y:   N - m g cos(theta) = 0          -> N = m g cos(theta)
+        x:   m g sen(theta) - f = m a        -> f = m (g sen(theta) - a)
+
+    El cociente f/N no depende de la masa -- se simplifica -- asi que tiene que
+    dar exactamente el mismo mu que se despeja de la cinematica. Que coincidan
+    es el control de que las fuerzas estan bien planteadas; si alguna vez no
+    coinciden, hay un error de signo en alguna parte.
+    """
+
+    masa: Variable
+    peso: Variable
+    normal: Variable
+    paralela: Variable
+    rozamiento: Variable
+    mu_de_fuerzas: Variable
+
+
+def cuerpo_libre(masa: Variable, theta: Variable, a_medida: Variable) -> Fuerzas:
+    """Fuerzas sobre el cuerpo, en newtons, con la incerteza de la masa incluida.
+
+    La masa entra como factor comun en las tres fuerzas, asi que su incerteza
+    (1 g sobre masas de 3 a 116 g) las domina. En mu no entra.
+    """
+    peso = masa * G
+    normal = peso * umath.cos(theta)
+    paralela = peso * umath.sin(theta)
+    rozamiento = masa * (G * umath.sin(theta) - a_medida)
+    return Fuerzas(
+        masa=masa,
+        peso=peso,
+        normal=normal,
+        paralela=paralela,
+        rozamiento=rozamiento,
+        mu_de_fuerzas=rozamiento / normal,
+    )
+
+
 def sigmas_entre(a: Variable, b: Variable) -> float:
     """Diferencia entre dos magnitudes, en unidades de sigma combinado."""
     sigma = math.hypot(a.s, b.s)
@@ -71,12 +114,14 @@ class Diagnostico:
     predicciones_rodando: dict[str, tuple[Variable, float]]
     veredicto: str
     advertencias: list[str]
+    fuerzas: Fuerzas | None = None
 
 
 def diagnosticar(
     a_medida: Variable,
     theta: Variable,
     mu_estatico: Variable | None = None,
+    masa: Variable | None = None,
 ) -> Diagnostico:
     """Confronta la aceleracion medida con las dos hipotesis."""
     advertencias: list[str] = []
@@ -122,6 +167,7 @@ def diagnosticar(
         predicciones_rodando=rodando,
         veredicto=veredicto,
         advertencias=advertencias,
+        fuerzas=cuerpo_libre(masa, theta, a_medida) if masa is not None else None,
     )
 
 
@@ -143,6 +189,17 @@ def informe(d: Diagnostico) -> str:
     lineas += ["", "  HIPOTESIS B - rueda sin deslizar:"]
     for nombre, (pred, sig) in sorted(d.predicciones_rodando.items(), key=lambda kv: kv[1][1]):
         lineas.append(f"    {nombre:26s} a = {pred.n:5.3f} m/s^2   ({sig:5.1f} sigma)")
+    if d.fuerzas is not None:
+        f = d.fuerzas
+        lineas += [
+            "",
+            f"  CUERPO LIBRE (m = {1000 * f.masa.n:.0f} +/- {1000 * f.masa.s:.0f} g):",
+            f"    peso        P = m g           = {1000 * f.peso.n:7.2f} +/- {1000 * f.peso.s:.2f} mN",
+            f"    normal      N = P cos@        = {1000 * f.normal.n:7.2f} +/- {1000 * f.normal.s:.2f} mN",
+            f"    paralela    P sen@            = {1000 * f.paralela.n:7.2f} +/- {1000 * f.paralela.s:.2f} mN",
+            f"    rozamiento  f = m(g sen@ - a) = {1000 * f.rozamiento.n:7.2f} +/- {1000 * f.rozamiento.s:.2f} mN",
+            f"    control     f/N = {f.mu_de_fuerzas.n:.4f} (debe coincidir con mu_dinamico)",
+        ]
     lineas += ["", f"  VEREDICTO: {d.veredicto}"]
     for adv in d.advertencias:
         lineas.append(f"  [!] {adv}")

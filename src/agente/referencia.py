@@ -76,6 +76,16 @@ def _u(datos: dict, campo: str, campo_sigma: str) -> Variable:
     return ufloat(datos[campo], datos[campo_sigma])
 
 
+def _entradas(seccion: dict) -> list[tuple[str, dict]]:
+    """Las claves que son datos. Las que empiezan con '_' son comentarios.
+
+    El JSON usa claves con guion bajo para documentarse a si mismo (_fuente,
+    _nota, _manuscrito); saltearlas evita que agregar una aclaracion rompa la
+    carga.
+    """
+    return [(k, v) for k, v in seccion.items() if not k.startswith("_")]
+
+
 def cargar(archivo: Path | None = None) -> Referencia:
     """Carga las mediciones del laboratorio y arma los objetos derivados."""
     archivo = archivo or ARCHIVO_REFERENCIA
@@ -83,7 +93,7 @@ def cargar(archivo: Path | None = None) -> Referencia:
         d = json.load(f)
 
     objetos = {}
-    for clave, o in d["objetos"].items():
+    for clave, o in _entradas(d["objetos"]):
         objetos[clave] = Objeto(
             clave=clave,
             nombre=o["nombre"],
@@ -92,7 +102,7 @@ def cargar(archivo: Path | None = None) -> Referencia:
         )
 
     angulos = {}
-    for clave, a in d["angulos"].items():
+    for clave, a in _entradas(d["angulos"]):
         angulos[clave] = Angulo(
             clave=clave,
             descripcion=a["descripcion"],
@@ -120,6 +130,12 @@ if __name__ == "__main__":
             f"  {clave} ({ang.descripcion}): "
             f"{math.degrees(rad.n):.3f} +/- {math.degrees(rad.s):.3f} grados"
         )
+
+    print()
+    print("MASAS")
+    for obj in ref.objetos.values():
+        masa_g = obj.masa_kg * 1000
+        print(f"  {obj.nombre:9s}: {masa_g:.0f} g")
 
     print("\nCOEFICIENTE ESTATICO (del angulo critico)")
     for clave, obj in ref.objetos.items():

@@ -23,7 +23,7 @@
         "Tapa"
       ],
       "masa_g": 5.0,
-      "sigma_masa_g": 0.5,
+      "sigma_masa_g": 1.0,
       "altura_inicio_movimiento_cm": 11.8,
       "sigma_altura_cm": 0.1
     },
@@ -33,7 +33,7 @@
         "Esponja"
       ],
       "masa_g": 3.0,
-      "sigma_masa_g": 0.5,
+      "sigma_masa_g": 1.0,
       "altura_inicio_movimiento_cm": 10.3,
       "sigma_altura_cm": 0.1
     },
@@ -44,7 +44,7 @@
         "Jabón"
       ],
       "masa_g": 116.0,
-      "sigma_masa_g": 0.5,
+      "sigma_masa_g": 1.0,
       "altura_inicio_movimiento_cm": 12.9,
       "sigma_altura_cm": 0.1
     }
@@ -67,18 +67,12 @@
       "altura_cm": 14.5,
       "sigma_altura_cm": 0.1,
       "_manuscrito": "altura = 14,5 ; sen(a) = 14,5/42 ; a = 20,1963306"
-    }
-  },
-  "_inconsistencia_detectada": {
-    "que": "Los saltos de altura entre angulos no son uniformes: 2->3 libros suma 3.0 cm, 3->4 libros suma 6.2 cm.",
-    "por_que_importa": "Si los libros son de espesor similar, uno de los tres valores esta mal. La regresion de mu tiene solo 3 puntos: un angulo erroneo desplaza la pendiente directamente.",
-    "sospecha": "El manuscrito de 4 libros dice '15 + 8.7', una suma que los otros dos no tienen. Puede ser que ahi se haya medido distinto o se haya agregado un apoyo.",
-    "accion": "PREGUNTAR AL GRUPO 3 antes de cerrar la regresion. Si no se resuelve, va a la seccion de limitaciones."
+    },
+    "_nota": "Los saltos de altura entre condiciones no son uniformes (2->3 libros suma 3.0 cm y 3->4 libros suma 6.2 cm). NO es un error: los libros son de espesores distintos y el grosor de cada uno no entra en el calculo. Lo unico que importa es la altura total medida, que es la que esta aca. Revisado con la catedra."
   },
   "sigmas_asumidos": {
-    "_nota": "El Grupo 3 no reporto incertezas. Los sigma de arriba son ASUMIDOS por nosotros y hay que confirmarlos.",
-    "criterio_longitudes": "0.1 cm = resolucion tipica de una regla de taller leida a ojo",
-    "criterio_masas": "0.5 g = resolucion de balanza de cocina. CONFIRMAR que balanza usaron: con 3 g y sigma 0.5 g, la masa de la esponja tiene 17% de error."
+    "_nota": "Criterio indicado por la catedra: la incerteza de una medicion es una unidad en su ultima cifra significativa.",
+    "criterio_longitudes": "Las longitudes estan anotadas con un decimal (42.0 / 23.7 / 7.5 cm) -> sigma = 0.1 cm",
+    "criterio_masas": "Las masas estan anotadas en gramos enteros (5 / 3 / 116 g) -> sigma = 1 g. No afecta a mu, que no depende de la masa, pero domina la incerteza de las fuerzas: la esponja de 3 g queda con 33% de error."
   }
 }
-

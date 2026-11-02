@@ -1,6 +1,7 @@
 # Hallazgos de la primera pasada sobre los videos
 
-> Estado al 31/10/2026. Complementa [arquitectura.md](arquitectura.md).
+> Estado al 02/11/2026, con las correcciones de la catedra aplicadas.
+> Complementa [arquitectura.md](arquitectura.md).
 > Todo lo de acá es reproducible: `python src/agente/medir.py "<video>.mp4"`.
 
 ## Resumen en una línea
@@ -151,30 +152,28 @@ esperable en signo, pero **23 % es mucho**. Dos argumentos a favor del papel:
 Aun así conviene **pedirle al Grupo 3 una foto con una regla apoyada sobre el
 plano**, que resolvería esto en un minuto.
 
-## 5. La inconsistencia de los ángulos
+## 5. Los saltos de altura desiguales: falsa alarma
 
-Los saltos de altura no son uniformes:
+Habíamos marcado como sospechoso que los saltos de altura no fueran uniformes
+(2 → 3 libros suma 3,0 cm y 3 → 4 libros suma 6,2 cm), razonando que si los
+libros fueran de espesor parecido uno de los tres valores tendría que estar mal.
 
-- 2 → 3 libros: **+3,0 cm**
-- 3 → 4 libros: **+6,2 cm**
+**La cátedra lo descartó: los libros son de espesores distintos y el grosor de
+cada uno no entra en ningún cálculo.** Lo único que importa es la altura total
+del extremo levantado, que es exactamente lo que está medido. No hay nada que
+corregir ni que preguntar.
 
-Si los libros son de espesor parecido, uno de los tres valores está mal. El
-manuscrito de 4 libros dice "altura = 15 + 8,7 = 23,7", una suma que los otros
-dos no tienen. Con solo tres puntos en la regresión, un ángulo equivocado
-desplaza la pendiente directamente.
-
-**Pregunta concreta para el Grupo 3:** ¿cómo midieron la altura en cada caso, y
-qué es el "15 + 8,7"?
+Queda anotado acá y en `laboratorio.json` para que no se vuelva a "descubrir"
+dentro de dos semanas.
 
 ## 6. Preguntas para el Grupo 3
 
-1. ¿Qué es el "15 + 8,7 = 23,7" del cálculo de 4 libros? (ver §5)
-2. ¿La tapa rodó o deslizó? ¿Lo vieron al filmar?
-3. ¿Tienen una foto con una regla apoyada sobre el plano del movimiento? (ver §4)
-4. ¿Con qué balanza pesaron? Con 3 g y σ = 0,5 g la masa de la esponja tiene 17 %
-   de error. (No afecta μ, pero sí cualquier cálculo de fuerzas.)
-5. ¿Reportan incertezas propias? Las de `laboratorio.json` son **asumidas por
-   nosotros** y hay que confirmarlas.
+1. ¿La tapa rodó o deslizó? ¿Lo vieron al filmar? (ver §3 — es lo que bloquea
+   el entregable)
+2. ¿Tienen una foto con una regla apoyada sobre el plano del movimiento? (ver §4)
+3. ¿Pueden volver a pesar con una balanza de más resolución? Anotadas al gramo,
+   la esponja de 3 g arrastra 33 % de incerteza a todas las fuerzas. A μ no lo
+   afecta, porque la masa se simplifica.
 
 ## 7. Próximos pasos sugeridos
 
@@ -185,8 +184,15 @@ qué es el "15 + 8,7"?
 4. Recién ahí, la regresión de μ sobre los ángulos y la comparación entre
    materiales.
 
+## 8. Correcciones de la cátedra aplicadas
 
-#ignorar el grosor de los libros
-#para la incerteza tomar la ultima cifra significativa
-#permitir que no sean uniformes, los libros son de espesores diferentes(ignorar)
-#incorporar masas 
+| Corrección | Qué cambió |
+|---|---|
+| Ignorar el grosor de los libros; que las alturas no sean uniformes está bien | Se sacó la alarma de `laboratorio.json` y se reescribió §5. `referencia.py` ya no la reporta. |
+| La incerteza es una unidad en la última cifra significativa | Las masas están anotadas en gramos enteros, así que σ pasó de 0,5 g (supuesto nuestro) a **1 g**. Las longitudes ya cumplían el criterio: están escritas con un decimal y tenían σ = 0,1 cm. |
+| Incorporar las masas | Se agregó el diagrama de cuerpo libre: peso, normal, componente paralela y rozamiento en newtons, con la incerteza de la masa propagada. Sale en la consola y en la pestaña Resumen de la ventana. |
+
+Sobre lo último: el cociente f/N no depende de la masa, porque se simplifica.
+Que dé **exactamente** el mismo μ que se despeja de la cinemática (0,4073 ±
+0,0087 en Tapa 4 libros, incerteza incluida) es el control de que el planteo de
+fuerzas cierra.

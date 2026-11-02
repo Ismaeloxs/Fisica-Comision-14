@@ -77,6 +77,7 @@ class Corrida:
     cin: Any
     aceleracion: Any
     # fisica
+    masa_kg: Any
     theta: Any | None
     mu_estatico: Any | None
     diagnostico: Any | None
@@ -156,7 +157,10 @@ def analizar_corrida(ruta: Path) -> Corrida:
         else None
     )
     mu_e = ref.mu_estatico(OBJETO_A_CLAVE[objeto])
-    diag = fisica.diagnosticar(a_final, theta, mu_e) if theta is not None else None
+    masa = ref.objetos[OBJETO_A_CLAVE[objeto]].masa_kg
+    diag = (
+        fisica.diagnosticar(a_final, theta, mu_e, masa) if theta is not None else None
+    )
 
     return Corrida(
         ruta=ruta,
@@ -178,6 +182,7 @@ def analizar_corrida(ruta: Path) -> Corrida:
         s_m=s_central,
         cin=cin,
         aceleracion=a_final,
+        masa_kg=masa,
         theta=theta,
         mu_estatico=mu_e,
         diagnostico=diag,
@@ -244,6 +249,17 @@ def resumen_dict(c: Corrida) -> dict:
         "residuo_rms_mm": 1000 * c.cin.residuo_rms,
         "chi2_reducido": c.cin.chi2_reducido,
         "mu_d_si_desliza": [diag.mu_d_si_desliza.n, diag.mu_d_si_desliza.s] if diag else None,
+        "masa_kg": [c.masa_kg.n, c.masa_kg.s],
+        "fuerzas_N": (
+            {
+                "peso": [diag.fuerzas.peso.n, diag.fuerzas.peso.s],
+                "normal": [diag.fuerzas.normal.n, diag.fuerzas.normal.s],
+                "paralela": [diag.fuerzas.paralela.n, diag.fuerzas.paralela.s],
+                "rozamiento": [diag.fuerzas.rozamiento.n, diag.fuerzas.rozamiento.s],
+            }
+            if diag and diag.fuerzas
+            else None
+        ),
         "veredicto": diag.veredicto if diag else None,
         "advertencias": diag.advertencias if diag else [],
     }
