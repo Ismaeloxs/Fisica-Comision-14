@@ -38,4 +38,5 @@ typing_extensions==4.16.0
 ultralytics==8.4.174
 ultralytics-platform==0.1.82
 ultralytics-thop==2.2.2
+uncertainties==3.2.3
 urllib3==2.8.0

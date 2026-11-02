@@ -26,13 +26,27 @@ from pathlib import Path
 import cv2
 
 RAIZ = Path(__file__).resolve().parents[2]
-CARPETA_VIDEOS = (
+# Los videos no estan en el repo (pesan ~1 GB y .gitignore los excluye), asi que
+# cada uno los tiene donde los descargo. Se prueban las dos ubicaciones que
+# convivieron en el proyecto y se usa la primera que exista; --carpeta manda
+# sobre esto. Si no existe ninguna se devuelve la primera, para que el mensaje
+# de error nombre la ubicacion que acordamos.
+CARPETAS_POSIBLES = (
+    RAIZ / "videos" / "Videos Proyecto mp4 120fps",
     RAIZ
     / "src"
     / "Fuerza de Rozamiento-videos"
     / "Fuerza de Rozamiento"
-    / "Videos Proyecto mp4 120fps"
+    / "Videos Proyecto mp4 120fps",
 )
+
+
+def carpeta_videos() -> Path:
+    """Primera carpeta de videos que exista entre las conocidas."""
+    return next((c for c in CARPETAS_POSIBLES if c.is_dir()), CARPETAS_POSIBLES[0])
+
+
+CARPETA_VIDEOS = carpeta_videos()
 SALIDA = RAIZ / "datos" / "inventario.csv"
 
 # "Tapa 4Libros Video1.mp4" / "Jabon Angulo Critico Video2.mp4"

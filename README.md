@@ -1,5 +1,11 @@
 # Repositorio de la comision 14 del proyecto de fisica 1
 
+## Documentacion
+
+* [COMO_USARLO.md](COMO_USARLO.md) — guia de uso: que hace cada modulo, que comandos correr y que hay que configurar.
+* [arquitectura.md](arquitectura.md) — por que el agente esta disenado asi.
+* [hallazgos.md](hallazgos.md) — resultados de la primera pasada sobre los videos y que falta resolver.
+
 ## Herramientas Utilizadas
 * **Python 3.14**
 * **NumPy 2.5.3**
