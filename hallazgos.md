@@ -184,3 +184,9 @@ qué es el "15 + 8,7"?
 3. Medir σ de posición en movimiento, no solo en reposo.
 4. Recién ahí, la regresión de μ sobre los ángulos y la comparación entre
    materiales.
+
+
+#ignorar el grosor de los libros
+#para la incerteza tomar la ultima cifra significativa
+#permitir que no sean uniformes, los libros son de espesores diferentes(ignorar)
+#incorporar masas 

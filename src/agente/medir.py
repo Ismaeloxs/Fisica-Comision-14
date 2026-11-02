@@ -1,6 +1,12 @@
 """Mide una corrida de punta a punta: video -> aceleracion -> diagnostico.
 
     python src/agente/medir.py "Tapa 4Libros Video1.mp4"
+
+El calculo esta en analizar_corrida(), que no imprime nada y devuelve TODO lo
+que produjo (series incluidas). medir() le pone el resumen de texto encima y
+el visor grafica lo mismo. Asi la ventana y la linea de comandos recorren
+exactamente el mismo camino, en vez de tener dos orquestaciones que se van
+separando con el tiempo.
 """
 
 from __future__ import annotations
@@ -8,7 +14,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
@@ -31,11 +39,66 @@ from inventario import CARPETA_VIDEOS, OBJETO_A_CLAVE, parsear_nombre
 RAIZ = Path(__file__).resolve().parents[2]
 FPS = 120.0
 
+CONDICION_A_ANGULO = {"4libros": "angulo_1", "3libros": "angulo_2", "2libros": "angulo_3"}
 
-def medir(ruta: Path, verbose: bool = True) -> dict:
+
+class ErrorMedicion(RuntimeError):
+    """La corrida no se puede medir. Lleva un mensaje para mostrarle al usuario."""
+
+
+@dataclass
+class Corrida:
+    """Todo lo que produjo una medicion, ya calculado.
+
+    Existe para que nadie tenga que volver a abrir el video: el resumen de
+    texto, los graficos y el overlay de la trayectoria salen todos de aca.
+    """
+
+    ruta: Path
+    objeto: str
+    condicion: str
+    repeticion: int
+    # calibracion
+    cal: Any
+    chequeo_escala: dict
+    # seguimiento
+    tray: Any
+    frames: np.ndarray
+    s_px: np.ndarray
+    n_px: np.ndarray
+    i0: int
+    i1: int
+    sigma_px: float
+    sigma_s_m: float
+    motivo_fin: str
+    # cinematica
+    t: np.ndarray
+    s_m: np.ndarray
+    cin: Any
+    aceleracion: Any
+    # fisica
+    theta: Any | None
+    mu_estatico: Any | None
+    diagnostico: Any | None
+
+    @property
+    def recorrido_cm(self) -> float:
+        return 100.0 * (self.s_m[-1] - self.s_m[0])
+
+    @property
+    def duracion_s(self) -> float:
+        return float(self.t[-1] - self.t[0])
+
+    @property
+    def es_angulo_critico(self) -> bool:
+        return self.condicion not in CONDICION_A_ANGULO
+
+
+def analizar_corrida(ruta: Path) -> Corrida:
+    """Video -> aceleracion y diagnostico. No imprime: devuelve todo."""
     partes = parsear_nombre(ruta)
     if partes is None:
-        raise SystemExit(f"Nombre no interpretable: {ruta.name}")
+        raise ErrorMedicion(f"Nombre no interpretable: {ruta.name}")
     objeto, condicion, repeticion = partes
 
     ref = cargar_referencia()
@@ -44,17 +107,20 @@ def medir(ruta: Path, verbose: bool = True) -> dict:
     ok, frame0 = cap.read()
     cap.release()
     if not ok:
-        raise SystemExit(f"No se pudo leer el primer cuadro de {ruta.name}")
+        raise ErrorMedicion(f"No se pudo leer el primer cuadro de {ruta.name}")
 
     # --- 1. calibracion ---
-    cal = calibrar(frame0)
+    try:
+        cal = calibrar(frame0)
+    except ValueError as e:
+        raise ErrorMedicion(str(e)) from e
     chequeo = verificar_escala(frame0, cal)
 
     # --- 2. seguimiento ---
     perfil = PERFILES[objeto]
     tray = seguir(ruta, perfil)
     if tray.cobertura < 0.5:
-        raise SystemExit(
+        raise ErrorMedicion(
             f"Cobertura del tracker demasiado baja ({tray.cobertura:.0%}): "
             f"el perfil de color de '{objeto}' no sirve para este video"
         )
@@ -63,7 +129,10 @@ def medir(ruta: Path, verbose: bool = True) -> dict:
     sigma_px = sigma_posicion(tray, cal.versor_rampa)
 
     # --- 3. ventana util ---
-    i0, i1 = ventana_deslizamiento(frames, s_px, FPS)
+    try:
+        i0, i1 = ventana_deslizamiento(frames, s_px, FPS)
+    except ValueError as e:
+        raise ErrorMedicion(str(e)) from e
     i1, motivo_fin = recortar_fuera_de_rampa(n_px, i0, i1)
 
     t = frames[i0:i1] / FPS
@@ -89,55 +158,102 @@ def medir(ruta: Path, verbose: bool = True) -> dict:
     mu_e = ref.mu_estatico(OBJETO_A_CLAVE[objeto])
     diag = fisica.diagnosticar(a_final, theta, mu_e) if theta is not None else None
 
-    if verbose:
-        print(f"\n{'=' * 68}\n{ruta.name}\n{'=' * 68}")
-        print(f"objeto={objeto}  condicion={condicion}  repeticion={repeticion}")
-        print("\nCALIBRACION")
-        print(f"  eje de la rampa   = {math.degrees(cal.angulo_rampa_rad):.2f} grados")
-        print(f"  papel rosa        = {cal.largo_papel_px:.1f} px para 7.5 cm")
-        print(f"  escala            = {cal.px_por_cm:.2f} px/cm")
-        if chequeo.get("disponible"):
-            print(
-                f"  control con rampa = {chequeo['px_por_cm_rampa']:.2f} px/cm "
-                f"(discrepancia {chequeo['discrepancia_relativa']:+.1%}, cota inferior)"
-            )
-        print("\nSEGUIMIENTO")
-        print(f"  cobertura         = {tray.cobertura:.0%} ({len(tray.detecciones)}/{tray.n_frames})")
-        print(f"  sigma de posicion = {sigma_px:.2f} px = {1000 * sigma_s_m:.2f} mm (medido con el cuerpo quieto)")
-        print(f"  ventana util      = cuadros {int(frames[i0])}-{int(frames[i1 - 1])} ({len(t)} puntos, {t[-1] - t[0]:.2f} s)")
-        print(f"  fin de la ventana = {motivo_fin}")
-        print(f"  recorrido         = {100 * (s_central[-1] - s_central[0]):.1f} cm")
-        print("\nCINEMATICA")
-        print(f"  a (ajuste)        = {a_final:.3f} m/s^2")
-        print(f"     del ajuste {cin.aceleracion.s:.3f} + de la escala {abs(a.n) * rel_escala:.3f}")
-        print(f"  v inicial         = {cin.v_inicial:.3f} m/s")
-        print(f"  residuo RMS       = {1000 * cin.residuo_rms:.2f} mm   max {1000 * cin.residuo_max:.2f} mm")
-        print(f"  chi2 reducido     = {cin.chi2_reducido:.2f}")
-        print(f"  a por diferencias = {np.median(cin.a_filtrada):.3f} m/s^2 (mediana, filtrada)")
-        if diag is not None:
-            print("\nFISICA")
-            print(fisica.informe(diag))
+    return Corrida(
+        ruta=ruta,
+        objeto=objeto,
+        condicion=condicion,
+        repeticion=repeticion,
+        cal=cal,
+        chequeo_escala=chequeo,
+        tray=tray,
+        frames=frames,
+        s_px=s_px,
+        n_px=n_px,
+        i0=i0,
+        i1=i1,
+        sigma_px=sigma_px,
+        sigma_s_m=sigma_s_m,
+        motivo_fin=motivo_fin,
+        t=t,
+        s_m=s_central,
+        cin=cin,
+        aceleracion=a_final,
+        theta=theta,
+        mu_estatico=mu_e,
+        diagnostico=diag,
+    )
 
+
+def informe_texto(c: Corrida) -> str:
+    """El resumen que imprime la linea de comandos, como string."""
+    cal, cin, tray = c.cal, c.cin, c.tray
+    rel_escala = cal.px_por_cm.s / cal.px_por_cm.n
+
+    lineas = [
+        f"\n{'=' * 68}\n{c.ruta.name}\n{'=' * 68}",
+        f"objeto={c.objeto}  condicion={c.condicion}  repeticion={c.repeticion}",
+        "\nCALIBRACION",
+        f"  eje de la rampa   = {math.degrees(cal.angulo_rampa_rad):.2f} grados",
+        f"  papel rosa        = {cal.largo_papel_px:.1f} px para 7.5 cm",
+        f"  escala            = {cal.px_por_cm:.2f} px/cm",
+    ]
+    if c.chequeo_escala.get("disponible"):
+        lineas.append(
+            f"  control con rampa = {c.chequeo_escala['px_por_cm_rampa']:.2f} px/cm "
+            f"(discrepancia {c.chequeo_escala['discrepancia_relativa']:+.1%}, cota inferior)"
+        )
+
+    lineas += [
+        "\nSEGUIMIENTO",
+        f"  cobertura         = {tray.cobertura:.0%} ({len(tray.detecciones)}/{tray.n_frames})",
+        f"  sigma de posicion = {c.sigma_px:.2f} px = {1000 * c.sigma_s_m:.2f} mm "
+        f"(medido con el cuerpo quieto)",
+        f"  ventana util      = cuadros {int(c.frames[c.i0])}-{int(c.frames[c.i1 - 1])} "
+        f"({len(c.t)} puntos, {c.duracion_s:.2f} s)",
+        f"  fin de la ventana = {c.motivo_fin}",
+        f"  recorrido         = {c.recorrido_cm:.1f} cm",
+        "\nCINEMATICA",
+        f"  a (ajuste)        = {c.aceleracion:.3f} m/s^2",
+        f"     del ajuste {cin.aceleracion.s:.3f} + de la escala "
+        f"{abs(cin.aceleracion.n) * rel_escala:.3f}",
+        f"  v inicial         = {cin.v_inicial:.3f} m/s",
+        f"  residuo RMS       = {1000 * cin.residuo_rms:.2f} mm   "
+        f"max {1000 * cin.residuo_max:.2f} mm",
+        f"  chi2 reducido     = {cin.chi2_reducido:.2f}",
+        f"  a por diferencias = {np.median(cin.a_filtrada):.3f} m/s^2 (mediana, filtrada)",
+    ]
+    if c.diagnostico is not None:
+        lineas += ["\nFISICA", fisica.informe(c.diagnostico)]
+    return "\n".join(lineas)
+
+
+def resumen_dict(c: Corrida) -> dict:
+    """Los numeros de la corrida, serializables a JSON."""
+    diag = c.diagnostico
     return {
-        "archivo": ruta.name,
-        "objeto": objeto,
-        "condicion": condicion,
-        "repeticion": repeticion,
-        "px_por_cm": [cal.px_por_cm.n, cal.px_por_cm.s],
-        "cobertura": tray.cobertura,
-        "sigma_posicion_px": sigma_px,
-        "n_puntos": len(t),
-        "recorrido_cm": 100 * (s_central[-1] - s_central[0]),
-        "aceleracion": [a_final.n, a_final.s],
-        "residuo_rms_mm": 1000 * cin.residuo_rms,
-        "chi2_reducido": cin.chi2_reducido,
+        "archivo": c.ruta.name,
+        "objeto": c.objeto,
+        "condicion": c.condicion,
+        "repeticion": c.repeticion,
+        "px_por_cm": [c.cal.px_por_cm.n, c.cal.px_por_cm.s],
+        "cobertura": c.tray.cobertura,
+        "sigma_posicion_px": c.sigma_px,
+        "n_puntos": len(c.t),
+        "recorrido_cm": c.recorrido_cm,
+        "aceleracion": [c.aceleracion.n, c.aceleracion.s],
+        "residuo_rms_mm": 1000 * c.cin.residuo_rms,
+        "chi2_reducido": c.cin.chi2_reducido,
         "mu_d_si_desliza": [diag.mu_d_si_desliza.n, diag.mu_d_si_desliza.s] if diag else None,
         "veredicto": diag.veredicto if diag else None,
         "advertencias": diag.advertencias if diag else [],
     }
 
 
-CONDICION_A_ANGULO = {"4libros": "angulo_1", "3libros": "angulo_2", "2libros": "angulo_3"}
+def medir(ruta: Path, verbose: bool = True) -> dict:
+    corrida = analizar_corrida(ruta)
+    if verbose:
+        print(informe_texto(corrida))
+    return resumen_dict(corrida)
 
 
 def main() -> None:
@@ -151,7 +267,11 @@ def main() -> None:
     if not ruta.is_file():
         raise SystemExit(f"No existe: {ruta}")
 
-    resultado = medir(ruta)
+    try:
+        resultado = medir(ruta)
+    except ErrorMedicion as e:
+        raise SystemExit(str(e)) from e
+
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(resultado, indent=2, ensure_ascii=False), encoding="utf-8")

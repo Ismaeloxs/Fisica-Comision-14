@@ -43,7 +43,8 @@ Cada módulo hace una cosa y se puede leer solo:
 | [`tracking.py`](src/agente/tracking.py) | Sigue el objeto por color, proyecta la trayectoria sobre el eje y recorta la ventana donde realmente desliza. |
 | [`cinematica.py`](src/agente/cinematica.py) | Ajusta s(t) por cuadrados mínimos y saca la aceleración con el error del ajuste. |
 | [`fisica.py`](src/agente/fisica.py) | Compara la aceleración medida contra deslizamiento y contra rodadura, y dictamina. |
-| [`medir.py`](src/agente/medir.py) | Orquesta todo lo anterior para una corrida. **Es el comando principal.** |
+| [`medir.py`](src/agente/medir.py) | Orquesta todo lo anterior para una corrida. Es el motor: lo usan tanto la consola como la ventana. |
+| [`visor.py`](src/agente/visor.py) | Ventana tkinter. No calcula nada propio: llama a `medir.py` y se ocupa solo de mostrar. |
 
 **Regla del proyecto:** ningún número viaja sin incerteza. Todo lo que calcula
 el núcleo sale como `ufloat` (valor ± σ) del paquete `uncertainties`.
@@ -118,6 +119,31 @@ agente no los entiende.
 ---
 
 ## 4. Los comandos
+
+### La ventana (lo más cómodo)
+
+```bash
+python src/agente/visor.py
+```
+
+No reemplaza nada: por dentro llama a las mismas funciones que la consola, así
+que da exactamente los mismos números.
+
+A la izquierda está la lista de videos, con filtros por objeto y por condición.
+**Medir corrida** (o doble click sobre el nombre) mide el seleccionado y tarda
+unos 6 segundos. **Medir todo el grupo filtrado** mide todos los que quedaron en
+la lista, uno por uno, mostrando el avance abajo.
+
+| Pestaña | Qué muestra |
+|---|---|
+| **Resumen** | Los números en cuatro tarjetas — calibración, seguimiento, cinemática, física — y el veredicto en un cartel de color con sus advertencias. |
+| **Gráficos** | s(t) con el ajuste encima, los residuos contra la banda de ±σ, y v(t) y a(t) crudas contra filtradas. La comparación crudo-vs-filtrado que pide la consigna, hecha. |
+| **Trayectoria** | Un cuadro del video con las detecciones dibujadas: en verde lo que entra al ajuste, en blanco lo descartado, y el eje sobre el que se proyecta s(t). Es la forma rápida de confirmar que el tracker siguió el objeto y no un reflejo o un libro. |
+| **Lote** | Una fila por repetición y, abajo, la dispersión entre ellas con su gráfico. Esa dispersión es el número honesto del experimento; el error del ajuste individual es entre tres y seis veces menor. |
+| **Texto** | El mismo informe que imprime la consola, para copiar y pegar. |
+
+Un video que falla no corta nada: sale un cartel con el motivo, y dentro de un
+lote queda como fila roja mientras el resto sigue.
 
 ### Ver los datos del laboratorio
 
@@ -269,6 +295,10 @@ probablemente **rueda**, no desliza. Está desarrollado en
 | `Nombre no interpretable: ...` | El archivo no sigue la convención de nombres. Ver §3. |
 | `No se encontro el papel rosa de calibracion` | Pasa con **todos los videos de ángulo crítico**: la rampa se mueve durante la toma y el papel queda fuera de donde el detector lo busca. Esos videos todavía no se pueden medir con este pipeline. |
 | `Cobertura del tracker demasiado baja (NN%)` | El perfil de color no separa el objeto del fondo. Es el caso del jabón: crema pálido sobre pared blanca. Ver [hallazgos.md §4](hallazgos.md). |
+
+En la ventana estos mismos errores salen en un cartel y no cortan la
+aplicación; dentro de un lote quedan como fila roja y el resto de las
+repeticiones sigue midiéndose.
 
 ---
 
