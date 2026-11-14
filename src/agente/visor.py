@@ -40,6 +40,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
 from inventario import CARPETA_VIDEOS, parsear_nombre  # noqa: E402
+from chat_ui import PanelChat  # noqa: E402
 from medir import ErrorMedicion, analizar_corrida, informe_texto  # noqa: E402
 
 FONDO = "#f4f4f6"
@@ -317,6 +318,14 @@ class Visor(tk.Tk):
         self.pestanias.add(self.tab_trayectoria, text="  Trayectoria  ")
         self.pestanias.add(self.tab_lote, text="  Lote  ")
         self.pestanias.add(self.tab_texto, text="  Texto  ")
+
+        # El chat se arma siempre: si no hay clave de API configurada se muestra
+        # a si mismo deshabilitado con la explicacion, y el resto del visor sigue
+        # funcionando igual.
+        self.tab_chat = ttk.Frame(self.pestanias)
+        self.pestanias.add(self.tab_chat, text="  Chat IA  ")
+        self.panel_chat = PanelChat(self.tab_chat)
+        self.panel_chat.pack(fill="both", expand=True)
 
         self.fig_graficos = Figure(figsize=(9, 6.6), dpi=96, facecolor=FONDO)
         self.canvas_graficos = FigureCanvasTkAgg(self.fig_graficos, master=self.tab_graficos)

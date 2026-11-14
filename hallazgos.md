@@ -133,10 +133,17 @@ A 2 libros el objeto casi no acelera y recorre pocos centímetros, así que qued
 pocos puntos y mucha dispersión. Puede que esos videos simplemente no sirvan para
 medir aceleración, y haya que decirlo en limitaciones.
 
-### El σ de posición está subestimado
+### El σ de posición está subestimado — y ya sabemos por qué
 Se mide con el cuerpo quieto (0,44 mm), pero en movimiento hay desenfoque que
 corre el centroide. El χ² reducido da ~40, o sea que el error real es ~6 veces el
-estimado. Hay que medir σ también en movimiento.
+estimado.
+
+**La causa está medida:** el área detectada cae de ~2200 a ~1300 px dentro de la
+ventana útil, con correlación **−0,65 contra la velocidad**. A 120 fps el cuerpo
+rápido se estira en el cuadro, baja la saturación del borde y menos píxeles pasan
+el umbral HSV. Un blob más chico y corrido tiene un centroide más ruidoso.
+
+Hay que medir σ en función de la velocidad, no solo en reposo.
 
 ### El control cruzado de escala no cierra
 La escala sale del papel rosa: 27,07 ± 0,54 px/cm. Contrastada contra la regla de
@@ -146,8 +153,15 @@ esperable en signo, pero **23 % es mucho**. Dos argumentos a favor del papel:
 
 - El recorrido medido con la escala del papel da 30,5 cm, consistente con una
   rampa de 42 cm donde el papel ocupa los primeros 7,5 cm.
-- El tamaño aparente de la tapa varía solo ±6 % a lo largo del recorrido, o sea
-  que la perspectiva aporta ~±3 % de escala, no 23 %.
+- ~~El tamaño aparente de la tapa varía solo ±6 % a lo largo del recorrido, o
+  sea que la perspectiva aporta ~±3 % de escala, no 23 %.~~ **Corregido
+  (13/11/2026):** esto estaba mal. El ±6 % se había medido sobre una muestra
+  dispersa del tramo lento. Midiendo la ventana completa, el área va de ~2200 a
+  ~1300 px, con **correlación −0,65 contra la velocidad**: lo que cambia el área
+  es el **desenfoque de movimiento**, no la perspectiva. Como las dos cosas
+  están confundidas, **del área no se puede concluir cuánto aporta la
+  perspectiva**. Queda sin acotar. Lo verifica
+  `tests/test_integracion.py::test_la_deteccion_se_degrada_con_la_velocidad`.
 
 Aun así conviene **pedirle al Grupo 3 una foto con una regla apoyada sobre el
 plano**, que resolvería esto en un minuto.
