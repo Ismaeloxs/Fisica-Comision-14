@@ -12,6 +12,7 @@ separando con el tiempo.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 from dataclasses import dataclass
@@ -265,11 +266,85 @@ def resumen_dict(c: Corrida) -> dict:
     }
 
 
-def medir(ruta: Path, verbose: bool = True) -> dict:
+SALIDA_SERIES = RAIZ / "resultados" / "series"
+
+
+def guardar_csv(c: Corrida, destino: Path | None = None) -> Path:
+    """Guarda la serie temporal de la ventana util (Paso 4 y 5 de la consigna).
+
+    Incluye (t, x, y, sigma_x, sigma_y) en pixeles y en metros, mas la
+    posicion sobre la rampa s(t) y sus derivadas v(t) y a(t), crudas y
+    filtradas.
+    """
+    if destino is None:
+        SALIDA_SERIES.mkdir(parents=True, exist_ok=True)
+        destino = SALIDA_SERIES / f"{c.ruta.stem.replace(' ', '_')}.csv"
+    else:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+
+    dets = c.tray.detecciones[c.i0 : c.i1]
+    escala_m = c.cal.px_por_cm.n * 100.0
+    x0, y0 = dets[0].x_px, dets[0].y_px
+
+    with destino.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(
+            [
+                "frame",
+                "t_s",
+                "x_px",
+                "y_px",
+                "sigma_x_px",
+                "sigma_y_px",
+                "x_m",
+                "y_m",
+                "sigma_x_m",
+                "sigma_y_m",
+                "s_m",
+                "sigma_s_m",
+                "s_filtrada_m",
+                "v_cruda_m_s",
+                "v_filtrada_m_s",
+                "a_cruda_m_s2",
+                "a_filtrada_m_s2",
+            ]
+        )
+        for k, d in enumerate(dets):
+            xm = (d.x_px - x0) / escala_m
+            ym = (d.y_px - y0) / escala_m
+            w.writerow(
+                [
+                    d.frame,
+                    f"{c.t[k]:.6f}",
+                    f"{d.x_px:.2f}",
+                    f"{d.y_px:.2f}",
+                    f"{c.sigma_px:.3f}",
+                    f"{c.sigma_px:.3f}",
+                    f"{xm:.6f}",
+                    f"{ym:.6f}",
+                    f"{c.sigma_s_m:.6f}",
+                    f"{c.sigma_s_m:.6f}",
+                    f"{c.s_m[k]:.6f}",
+                    f"{c.sigma_s_m:.6f}",
+                    f"{c.cin.s_filtrada[k]:.6f}",
+                    f"{c.cin.v_cruda[k]:.6f}",
+                    f"{c.cin.v_filtrada[k]:.6f}",
+                    f"{c.cin.a_cruda[k]:.6f}",
+                    f"{c.cin.a_filtrada[k]:.6f}",
+                ]
+            )
+    return destino
+
+
+def medir(ruta: Path, verbose: bool = True, ruta_csv: Path | None = None) -> dict:
     corrida = analizar_corrida(ruta)
+    archivo_csv = guardar_csv(corrida, ruta_csv)
     if verbose:
         print(informe_texto(corrida))
-    return resumen_dict(corrida)
+        print(f"\n-> CSV serie temporal: {archivo_csv}")
+    res = resumen_dict(corrida)
+    res["archivo_csv"] = str(archivo_csv)
+    return res
 
 
 def main() -> None:
@@ -277,6 +352,11 @@ def main() -> None:
     p.add_argument("video", help="nombre del archivo dentro de la carpeta de videos")
     p.add_argument("--carpeta", type=Path, default=CARPETA_VIDEOS)
     p.add_argument("--json", type=Path, help="guardar el resultado en este archivo")
+    p.add_argument(
+        "--csv",
+        type=Path,
+        help="ruta donde guardar el CSV con la serie temporal (por defecto resultados/series/<video>.csv)",
+    )
     args = p.parse_args()
 
     ruta = args.carpeta / args.video
@@ -284,14 +364,14 @@ def main() -> None:
         raise SystemExit(f"No existe: {ruta}")
 
     try:
-        resultado = medir(ruta)
+        resultado = medir(ruta, ruta_csv=args.csv)
     except ErrorMedicion as e:
         raise SystemExit(str(e)) from e
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(resultado, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"\n-> {args.json}")
+        print(f"-> JSON resumen:       {args.json}")
 
 
 if __name__ == "__main__":

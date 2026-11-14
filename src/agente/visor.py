@@ -40,7 +40,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
 from inventario import CARPETA_VIDEOS, parsear_nombre  # noqa: E402
-from medir import ErrorMedicion, analizar_corrida, informe_texto  # noqa: E402
+from medir import ErrorMedicion, analizar_corrida, guardar_csv, informe_texto  # noqa: E402
 
 FONDO = "#f4f4f6"
 TARJETA = "#ffffff"
@@ -113,6 +113,7 @@ def angulo_trayectoria(c) -> float:
 def _medir_en_hilo(ruta: Path) -> Medida:
     try:
         corrida = analizar_corrida(ruta)
+        guardar_csv(corrida)
     except ErrorMedicion as e:
         return Medida(None, None, error=str(e), nombre=ruta.name)
     except Exception as e:  # el tracker puede romper de formas variadas
