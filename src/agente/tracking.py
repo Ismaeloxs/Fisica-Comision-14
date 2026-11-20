@@ -54,14 +54,14 @@ PERFILES: dict[str, PerfilColor] = {
     ),
     "jabon": PerfilColor(
         nombre="jabon",
-        hsv_min=(18, 30, 150),
-        hsv_max=(38, 120, 255),
+        hsv_min=(14, 95, 105),
+        hsv_max=(21, 157, 246),
         area_min=2000,
         area_max=40000,
         nota=(
-            "EL DIFICIL: crema palido, poco saturado, sobre pared blanca y "
-            "regla de madera. El umbral de color probablemente NO alcance; "
-            "este objeto seguramente necesite CSRT o diferencia de cuadros."
+            "Rango ajustado con el muestreo del otro grupo: H 14-21 y S 95-157 "
+            "separan el jabon de la pared blanca (S~30) y V>=105 lo separa del "
+            "canto oscuro de la madera (V~72-103)."
         ),
     ),
 }

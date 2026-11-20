@@ -1,198 +1,169 @@
-# Hallazgos de la primera pasada sobre los videos
+# Hallazgos del agente sobre los 61 videos (v2)
 
-> Estado al 02/11/2026, con las correcciones de la catedra aplicadas.
-> Complementa [arquitectura.md](arquitectura.md).
-> Todo lo de acá es reproducible: `python src/agente/medir.py "<video>.mp4"`.
+> Estado al 20/11/2026 (rama `angulo-critico`). Complementa [arquitectura.md](arquitectura.md) y [COMO_USARLO.md](COMO_USARLO.md).
+> Todo lo de acá es reproducible con `python src/agente/angulos_agente.py --ver` y `python src/agente/medir.py "<video>.mp4"`.
 
 ## Resumen en una línea
 
-El pipeline mide bien la **tapa** en dos de los tres ángulos. Para los otros dos
-objetos todavía no mide de forma confiable. Y los números de la tapa **no son
-compatibles con deslizamiento puro**, que es el modelo que la consigna asume por
-defecto.
+Con el nuevo perfil HSV del jabón y los ángulos medidos directamente por el
+agente (`datos/agente/angulos.json`), el pipeline mide **43 de los 45 videos con
+libros y los 16 videos de ángulo crítico** de los tres objetos. El hallazgo
+central de esta versión es que **el jabón da un $\mu_d \approx 0,38$ constante en
+los tres ángulos cuando se usan los ángulos del agente**, y que la paradoja
+generalizada de $\mu_d > \mu_e$ en los tres objetos se explica por sesgos
+experimentales concretos (espesor de la tabla, altura de 4 libros y vibraciones
+del montaje manual del ángulo crítico), no porque todos los cuerpos rueden.
 
-## 1. Lo que ya funciona
+---
 
-| Pieza | Estado | Dónde |
-|---|---|---|
-| Datos del laboratorio extraídos | ✅ | [datos/referencia/laboratorio.json](datos/referencia/laboratorio.json) |
-| Ángulos con incerteza propagada | ✅ | [src/agente/referencia.py](src/agente/referencia.py) |
-| Inventario de los 61 videos | ✅ | [src/agente/inventario.py](src/agente/inventario.py) |
-| Calibración espacial + eje de la rampa | ✅ | [src/agente/calibracion.py](src/agente/calibracion.py) |
-| Seguimiento por color | ⚠️ solo tapa y esponja | [src/agente/tracking.py](src/agente/tracking.py) |
-| Ajuste de aceleración | ✅ | [src/agente/cinematica.py](src/agente/cinematica.py) |
-| Chequeo desliza-vs-rueda | ✅ | [src/agente/fisica.py](src/agente/fisica.py) |
+## 1. Qué cambió respecto de la v1 (31/10/2026)
 
-### Los videos son mejores de lo que esperábamos
-
-61 videos, todos **1920×1080 a 120 fps**, y los 120 fps son **reales**: se
-verificaron leyendo el timestamp de cada cuadro y ninguno tiene framerate
-variable. Se puede usar `t = cuadro/120` sin corrección. Era el riesgo silencioso
-número uno y no se materializó.
-
-### Los ángulos estaban escondidos
-
-El `.docx` del Grupo 3 tiene los títulos ("Cálculo del valor del ángulo para 4
-libros apilados:") **sin valores**. Los valores estaban en cuatro fotos de
-anotaciones a mano embebidas en el documento. Extraídos y verificados: nuestras
-cuentas reproducen los ángulos manuscritos al cuarto decimal, lo que confirma que
-la hipotenusa de 42 cm aplica a los tres casos.
-
-| Condición | Altura | Ángulo |
-|---|---|---|
-| 4 libros | 23,7 cm | 34,353 ± 0,190° |
-| 3 libros | 17,5 cm | 24,624 ± 0,163° |
-| 2 libros | 14,5 cm | 20,196 ± 0,154° |
-
-Coeficiente estático del ángulo crítico, μ_e = tan(θ_c):
-
-| Objeto | Masa | θ crítico | μ_e |
+| Pieza | v1 | v2 (ahora) | Dónde |
 |---|---|---|---|
-| Tapa | 5 g | 16,32 ± 0,15° | **0,2927 ± 0,0028** |
-| Esponja | 3 g | 14,20 ± 0,14° | **0,2530 ± 0,0027** |
-| Jabón | 116 g | 17,89 ± 0,15° | **0,3227 ± 0,0029** |
+| Seguimiento del **jabón** | ❌ Roto (0/5 en 3 libros, 3 aceleraciones negativas en 4 libros) | ✅ **15/15 videos con libros** (100 % cobertura en 2 y 3 libros; 6 % dispersión en 3 libros) | [`tracking.py`](src/agente/tracking.py) |
+| Videos de **ángulo crítico** | ❌ Fallaban todos en calibración | ✅ **16/16 medidos** (tapa, esponja y jabón) | [`angulo_critico.py`](src/agente/angulo_critico.py) |
+| **Ángulos del agente** cacheados | ❌ Solo se usaban los de la regla (Grupo 3) | ✅ Calculados una vez y guardados en JSON; selector `agente` / `laboratorio` en consola y visor | [`angulos_agente.py`](src/agente/angulos_agente.py), [`datos/agente/angulos.json`](datos/agente/angulos.json) |
+| Exportación de tabla `(t, x, y, σ, s, v, a)` | ❌ Solo resumen JSON en consola | ✅ CSV automático por corrida en `resultados/series/` | [`medir.py`](src/agente/medir.py), [`visor.py`](src/agente/visor.py) |
+| Interfaz gráfica (`visor.py`) | ❌ No existía en v1 | ✅ Con selector de fuente de ángulos, gráficos crudo vs. filtrado, overlay de trayectoria y lote | [`visor.py`](src/agente/visor.py) |
 
-## 2. Resultados de la primera medición completa
+El cambio clave en el jabón vino de ajustar su rango HSV con el muestreo
+compartido por el otro grupo (`[14, 95, 105] → [21, 157, 246]`): el rango
+anterior (`H ≥ 18`, `S ≤ 120`) cortaba al jabón real (`H ≈ 15–19`, `S ≈ 128–164`)
+y dejaba entrar la pared blanca (`S ≈ 30`).
 
-Aceleración media por condición, con la **dispersión entre repeticiones**:
+---
 
-| Objeto | Condición | n | a [m/s²] | dispersión | confiable |
-|---|---|---|---|---|---|
-| Tapa | 4 libros | 5 | 2,287 ± 0,204 | 8,9 % | ✅ |
-| Tapa | 3 libros | 5 | 1,280 ± 0,127 | 9,9 % | ✅ |
-| Tapa | 2 libros | 4 | 0,430 ± 0,267 | 62 % | ❌ |
-| Esponja | 4 libros | 5 | 1,111 ± 0,234 | 21 % | ⚠️ |
-| Esponja | 3 libros | 5 | 0,148 ± 0,076 | 51 % | ❌ |
-| Esponja | 2 libros | 0 | — | — | ❌ |
-| Jabón | 4 libros | 2 | 2,111 ± 0,089 | 4,2 % | ❌ (3 de 5 corridas dieron aceleración negativa) |
-| Jabón | 3 libros | 0 | — | — | ❌ |
-| Jabón | 2 libros | 5 | 0,036 ± 0,027 | 77 % | ❌ |
+## 2. Ángulos medidos por el agente vs. regla del Grupo 3
 
-**La dispersión entre repeticiones es el número honesto, no el error del ajuste.**
-Cada ajuste individual da ±0,06 m/s² (≈3 %), pero repetir la misma condición da
-9 %. El ajuste solo mide cuán parabólica es una trayectoria, no cuán repetible es
-el experimento.
+El agente mide el ángulo del canto de madera de la rampa (PCA) corregido por el
+giro de cámara (bordes verticales del termo). Todo quedó cacheado en
+[`datos/agente/angulos.json`](datos/agente/angulos.json):
 
-## 3. El hallazgo que cambia la física: la tapa no desliza
+### Plano inclinado fijo (45 videos, 15 por condición)
 
-La consigna pide μ dinámico por regresión asumiendo deslizamiento:
-`a = g(senθ − μ cosθ)`. Si eso vale, **μ tiene que dar lo mismo en los tres
-ángulos**. Y si en cambio rueda sin deslizar, `a = g senθ/(1 + I/mR²)`, lo
-constante tiene que ser `1 + I/mR²`.
+| Condición | Regla Grupo 3 (`asin(h/42)`) | Agente (imagen) | Diferencia |
+|---|---:|---:|---:|
+| **4 libros** | $34,35 \pm 0,19^\circ$ | $32,57 \pm 0,42^\circ$ | $-1,79^\circ$ |
+| **3 libros** | $24,62 \pm 0,16^\circ$ | $23,72 \pm 0,20^\circ$ | $-0,91^\circ$ |
+| **2 libros** | $20,20 \pm 0,15^\circ$ | $20,83 \pm 0,33^\circ$ | $+0,63^\circ$ |
 
-| Condición | θ | a medida | μ si desliza | 1+I/mR² si rueda |
-|---|---|---|---|---|
-| 4 libros | 34,35° | 2,287 ± 0,204 | 0,401 ± 0,026 | 2,42 ± 0,22 |
-| 3 libros | 24,62° | 1,280 ± 0,127 | 0,315 ± 0,015 | 3,19 ± 0,32 |
-| 2 libros | 20,20° | 0,430 ± 0,267 | 0,321 ± 0,029 | 7,88 ± 4,89 |
+*(Recta de contraste: $\theta_{\text{imagen}} = 0,842\,\theta_{\text{regla}} + 3,47^\circ$.)*
 
-**Ninguna de las dos constantes se mantiene.** Y además:
+### Ángulo crítico ($\mu_e = \tan\theta_c$, 16 videos)
 
-> Los tres μ dan **mayores** que el μ_e = 0,2927 medido por ángulo crítico. El
-> rozamiento dinámico no puede superar al estático. La hipótesis de
-> deslizamiento puro queda descartada, no por gusto sino por contradicción.
+| Objeto | $\theta_c$ Grupo 3 | $\mu_e$ Grupo 3 | $\theta_c$ Agente | $\mu_e$ Agente | Criterio y videos |
+|---|---:|---:|---:|---:|---|
+| **Tapa** | $16,32 \pm 0,15^\circ$ | $0,2927 \pm 0,0028$ | $12,99 \pm 0,27^\circ$ | $0,2306 \pm 0,0050$ | 5/5, deslizamiento (`> 1 cm/s`) |
+| **Esponja** | $14,20 \pm 0,14^\circ$ | $0,2530 \pm 0,0027$ | $12,61 \pm 0,33^\circ$ | $0,2236 \pm 0,0061$ | 5/5, corrimiento lento (`> 0,3 cm`) |
+| **Jabón** | $17,89 \pm 0,15^\circ$ | $0,3227 \pm 0,0029$ | $12,87 \pm 0,54^\circ$ | $0,2285 \pm 0,0101$ | 6/6 (2 deslizamiento + 4 corrimiento lento) |
 
-Tiene sentido físico: la tapa es un tapón de botella apoyado sobre su canto, o
-sea un cilindro que puede rodar.
+**Dos observaciones directas de los videos de ángulo crítico:**
 
-Un modelo mixto (rueda con resistencia a la rodadura),
-`a = (g senθ − c_r g cosθ)/(1 + I/mR²)`, ajustado a los dos ángulos confiables da
-c_r = 0,226 ± 0,064 e I/mR² = 0,622 ± 0,339 — valores plausibles para un tapón
-(entre disco macizo 0,5 y cilindro hueco 1,0). **Pero son dos parámetros
-ajustados a dos datos: cero grados de libertad, no está validado.** Para
-testearlo hace falta el tercer ángulo midiendo bien.
+1. **La esponja y parte del jabón no arrancan de golpe:** en los 5 videos de
+   esponja y en 4 de los 6 de jabón el objeto nunca supera `1 cm/s`; se corre
+   despacio (*creep* / *stick-slip*) mientras se levanta la tabla a pulso.
+2. **La rampa en el video nunca llega al ángulo anotado con la regla:** en la
+   tapa llega a $12,9\text{--}14,7^\circ$ (vs. $16,3^\circ$), en la esponja a
+   $11,6\text{--}13,6^\circ$ (vs. $14,2^\circ$) y en el jabón a
+   $11,5\text{--}15,2^\circ$ (vs. $17,9^\circ$). Al trazar manualmente la
+   geometría sobre un cuadro se ve la causa principal: **la tabla tiene ~1 cm de
+   espesor** y se midió la altura desde la mesa hasta la cara superior
+   dividiendo por $42\text{ cm}$ sin descontar ese espesor. Restar ~1 cm a
+   $h_c = 10,3\text{ cm}$ (esponja) lleva $14,2^\circ$ a **$12,8^\circ$**,
+   coincidiendo con el agente ($12,6^\circ$).
 
-### Qué implica para el proyecto
+---
 
-El entregable "μ dinámico por regresión" **no se puede producir para la tapa** sin
-antes resolver si rueda o desliza. Opciones:
+## 3. Resultados dinámicos sobre los 45 videos con libros
 
-1. Mirar los videos cuadro a cuadro y ver si gira. Es directo y gratis.
-2. Pedirle al Grupo 3 que repita con la tapa pegada/trabada para que no pueda
-   rodar, o apoyada sobre su cara plana.
-3. Reportar la rodadura como el resultado, que es un resultado legítimo y además
-   es literalmente el "chequeo físico" que la consigna exige para este
-   movimiento.
+Aceleración media y $\mu_d$ asumiendo deslizamiento puro, reportando la
+**dispersión entre repeticiones** (el error honesto del experimento, no el error
+del ajuste individual):
 
-**Ojo con el ángulo crítico:** si la tapa rueda, el ángulo al que arranca a
-moverse no mide μ estático, mide resistencia a la rodadura. Los μ_e de la tabla
-de arriba quedarían mal interpretados para ese objeto.
+| Objeto | Condición | Medidos | Cortas\* | $a$ [m/s²] | Disp. $a$ | $\mu_d$ (áng. agente) | $\mu_d$ (áng. lab) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| **Tapa** | 4 libros | 5/5 | 1 | $2,287 \pm 0,204$ | 9 % | $0,3657 \pm 0,0228$ | $0,4011 \pm 0,0252$ |
+| **Tapa** | 3 libros | 5/5 | 0 | $1,280 \pm 0,127$ | 10 % | $0,2980 \pm 0,0143$ | $0,3149 \pm 0,0142$ |
+| **Tapa** | 2 libros | 4/6 | 0 | $0,430 \pm 0,267$ | 62 % | $0,3342 \pm 0,0333$ | $0,3212 \pm 0,0291$ |
+| **Esponja** | 4 libros | 5/5 | 0 | $1,111 \pm 0,234$ | 21 % | $0,5027 \pm 0,0230$ | $0,5464 \pm 0,0289$ |
+| **Esponja** | 3 libros | 5/5 | 0 | $0,148 \pm 0,076$ | 51 % | $0,4224 \pm 0,0085$ | $0,4417 \pm 0,0085$ |
+| **Esponja** | 2 libros | 4/4 | 0 | $-0,014 \pm 0,019$ | 143 % | $0,3852 \pm 0,0027$ | $0,3693 \pm 0,0021$ |
+| **Jabón** | 4 libros | 5/5 | 3 | $1,909 \pm 0,459$ | 24 % | $0,4054 \pm 0,0539$ | $0,4478 \pm 0,0567$ |
+| **Jabón** | 3 libros | 5/5 | 0 | $0,574 \pm 0,035$ | **6 %** | $0,3748 \pm 0,0092$ | $0,3940 \pm 0,0039$ |
+| **Jabón** | 2 libros | 5/5 | 0 | $0,017 \pm 0,010$ | 58 % | $0,3764 \pm 0,0087$ | $0,3660 \pm 0,0011$ |
 
-## 4. Lo que no funciona todavía
+*\*Corridas con ventana útil corta (< 25 puntos o < 10 cm de recorrido), marcadas en amarillo en el visor.*
 
-### El tracker del jabón está roto
-Crema pálido sobre pared blanca y regla de madera: el umbral de color no lo
-separa del fondo. Da cobertura 80-88 % y aceleraciones negativas. Era el objeto
-que había marcado como difícil en la arquitectura. **Necesita otro método**:
-`cv2.TrackerCSRT` sembrado con una ROI, o diferencia de cuadros (la escena es
-estática salvo el objeto y la mano, así que la resta de fondo debería aislarlo
-limpio para los tres objetos).
+### Qué destaca de esta tabla
 
-### Las ventanas de los ángulos chicos son malas
-A 2 libros el objeto casi no acelera y recorre pocos centímetros, así que quedan
-pocos puntos y mucha dispersión. Puede que esos videos simplemente no sirvan para
-medir aceleración, y haya que decirlo en limitaciones.
+1. **El jabón cierra consistente en los tres ángulos cuando se usan los ángulos del agente:**
+   - Con ángulos del agente: $\mu_d = 0,405 \pm 0,054$ (4 libros), **$0,375 \pm 0,009$** (3 libros), **$0,376 \pm 0,009$** (2 libros). Los tres son compatibles entre sí dentro de $1\,\sigma$.
+   - Con ángulos del laboratorio: $\mu_d$ sube sistemáticamente con el ángulo ($0,366 \to 0,394 \to 0,448$), lo cual refleja el sesgo en las alturas anotadas (en especial el salto anómalo de $+6,2\text{ cm}$ en 4 libros).
+2. **La esponja no acelera en 2 libros ($a \approx 0$) y apenas baja en 3 libros ($a = 0,15\text{ m/s}^2$):**
+   Esto implica un coeficiente de rozamiento efectivo cercano a $\tan(21\text{--}24^\circ) \approx 0,38\text{--}0,44$ sobre la rampa firme.
+3. **La tapa sigue dando un $\mu_d$ ligeramente más alto en 4 libros que en 3 libros**, aunque la brecha se achica al pasar de los ángulos de la regla ($0,401$ vs. $0,315$) a los del agente ($0,366$ vs. $0,298$).
 
-### El σ de posición está subestimado
-Se mide con el cuerpo quieto (0,44 mm), pero en movimiento hay desenfoque que
-corre el centroide. El χ² reducido da ~40, o sea que el error real es ~6 veces el
-estimado. Hay que medir σ también en movimiento.
+---
 
-### El control cruzado de escala no cierra
-La escala sale del papel rosa: 27,07 ± 0,54 px/cm. Contrastada contra la regla de
-42 cm da ~22 px/cm, 23 % menos. La regla es cota inferior (sus extremos quedan
-ocultos: arriba el papel, abajo contra la mesa), así que la discrepancia es
-esperable en signo, pero **23 % es mucho**. Dos argumentos a favor del papel:
+## 4. Por qué da $\mu_d > \mu_e$ en los tres objetos (revisión de v1)
 
-- El recorrido medido con la escala del papel da 30,5 cm, consistente con una
-  rampa de 42 cm donde el papel ocupa los primeros 7,5 cm.
-- El tamaño aparente de la tapa varía solo ±6 % a lo largo del recorrido, o sea
-  que la perspectiva aporta ~±3 % de escala, no 23 %.
+En la v1 se había concluido que la tapa no deslizaba porque $\mu_d > \mu_e$. Al
+medir los tres objetos completos, **$\mu_d > \mu_e$ ocurre también en el jabón y
+la esponja**, que claramente no ruedan. Además, para la tapa una rodadura pura
+requeriría $a \ge g\sin\theta / 2$ ($2,77\text{ m/s}^2$ en 4 libros y
+$2,04\text{ m/s}^2$ en 3 libros), que es *mayor* que la aceleración medida
+($2,29$ y $1,28\text{ m/s}^2$).
 
-Aun así conviene **pedirle al Grupo 3 una foto con una regla apoyada sobre el
-plano**, que resolvería esto en un minuto.
+Por lo tanto, el problema principal **no es rodadura pura**, sino una
+combinación de factores experimentales medibles:
 
-## 5. Los saltos de altura desiguales: falsa alarma
+1. **El ensayo manual de ángulo crítico subestima $\mu_e$:** en los videos se ve
+   que la rampa se levanta a pulso apoyada sobre una tablita y un frasco
+   cilíndrico. Las microvibraciones de la mano destraban los cuerpos (en especial
+   la esponja de 3 g) a $\sim 13^\circ$ ($\mu_e \approx 0,22\text{--}0,25$),
+   mientras que sobre la pila rígida de libros a $20^\circ$ la esponja y el
+   jabón casi ni arrancan ($\mu \approx 0,38\text{--}0,44$).
+2. **El ángulo de 4 libros del Grupo 3 está sobreestimado:** el salto de alturas
+   es $+3,0\text{ cm}$ de 2 a 3 libros pero $+6,2\text{ cm}$ de 3 a 4 libros
+   (`15 + 8,7 = 23,7 cm`). El agente mide $32,57^\circ$ en vez de $34,35^\circ$.
+   Usar el ángulo del agente baja $\mu_d$ entre $0,02$ y $0,04$ y hace que el
+   jabón quede constante en los tres ángulos.
+3. **Posible sobreestimación de la escala `px/cm` del papel rosa:** da
+   $27\text{--}29\text{ px/cm}$ frente a $\sim 22\text{ px/cm}$ del control con
+   la regla de $42\text{ cm}$ (cota inferior). Si la escala real fuera menor,
+   todas las aceleraciones subirían y todos los $\mu_d$ bajarían.
+4. **La incerteza asumida en $\mu_e$ de laboratorio ($\pm 0,003$) es demasiado
+   chica:** asume precisión de $1\text{ mm}$ levantando una rampa a mano, lo que
+   infla artificialmente los "$\sigma$ de desacuerdo" en el veredicto.
 
-Habíamos marcado como sospechoso que los saltos de altura no fueran uniformes
-(2 → 3 libros suma 3,0 cm y 3 → 4 libros suma 6,2 cm), razonando que si los
-libros fueran de espesor parecido uno de los tres valores tendría que estar mal.
+---
 
-**La cátedra lo descartó: los libros son de espesores distintos y el grosor de
-cada uno no entra en ningún cálculo.** Lo único que importa es la altura total
-del extremo levantado, que es exactamente lo que está medido. No hay nada que
-corregir ni que preguntar.
+## 5. Limitaciones abiertas (para la sección obligatoria del informe)
 
-Queda anotado acá y en `laboratorio.json` para que no se vuelva a "descubrir"
-dentro de dos semanas.
+- **$\sigma$ de posición subestimado en `medir.py`:** se mide con el cuerpo
+  quieto ($\sim 0,44\text{ mm}$ en la tapa), pero en movimiento el desenfoque y
+  el cambio de forma de la mancha producen residuos de $\sim 2\text{--}3\text{ mm}$
+  ($\chi^2_{\text{red}} \approx 40$). El error de $a$ igual sale escalado por
+  los residuos en `np.polyfit(..., cov=True)`, pero el $\sigma$ reportado en los
+  CSV refleja solo el piso estático del detector.
+- **Ruido en aceleración cruda:** a $120\text{ fps}$, derivar dos veces divide
+  por $\Delta t^2 = (1/120)^2$, amplificando $1\text{ mm}$ de ruido en posición
+  a $\sim 9\text{ m/s}^2$ en `a_cruda`. Por eso el valor físico sale del ajuste
+  cuadrático y `a_filtrada` usa Savitzky-Golay.
+- **Ángulos aparentes:** `angulos_agente.py` mide la proyección en 2D sin
+  homografía; depende de que la cámara esté perpendicular al plano.
+- **Sin videos en superficie horizontal:** la consigna pide velocidad,
+  aceleración y diagrama de cuerpo libre también en plano horizontal; el Grupo 3
+  solo filmó plano inclinado y ángulo crítico.
+- **Sin exports de Tracker del Grupo 3:** falta el contraste automático serie
+  contra serie y $\mu_d$ contra $\mu_d$ frente a la medición humana.
+- **Inconsistencia de alturas de 4 libros** (`15 + 8,7 = 23,7 cm`) y **foto de
+  escala con regla sobre el plano**: siguen pendientes de confirmar con el Grupo 3.
 
-## 6. Preguntas para el Grupo 3
+---
 
-1. ¿La tapa rodó o deslizó? ¿Lo vieron al filmar? (ver §3 — es lo que bloquea
-   el entregable)
-2. ¿Tienen una foto con una regla apoyada sobre el plano del movimiento? (ver §4)
-3. ¿Pueden volver a pesar con una balanza de más resolución? Anotadas al gramo,
-   la esponja de 3 g arrastra 33 % de incerteza a todas las fuerzas. A μ no lo
-   afecta, porque la masa se simplifica.
+## 6. Próximos pasos
 
-## 7. Próximos pasos sugeridos
-
-1. Resolver la pregunta rueda-vs-desliza mirando los videos. Bloquea la física.
-2. Reemplazar el tracker por diferencia de cuadros, que debería servir para los
-   tres objetos de una.
-3. Medir σ de posición en movimiento, no solo en reposo.
-4. Recién ahí, la regresión de μ sobre los ángulos y la comparación entre
-   materiales.
-
-## 8. Correcciones de la cátedra aplicadas
-
-| Corrección | Qué cambió |
-|---|---|
-| Ignorar el grosor de los libros; que las alturas no sean uniformes está bien | Se sacó la alarma de `laboratorio.json` y se reescribió §5. `referencia.py` ya no la reporta. |
-| La incerteza es una unidad en la última cifra significativa | Las masas están anotadas en gramos enteros, así que σ pasó de 0,5 g (supuesto nuestro) a **1 g**. Las longitudes ya cumplían el criterio: están escritas con un decimal y tenían σ = 0,1 cm. |
-| Incorporar las masas | Se agregó el diagrama de cuerpo libre: peso, normal, componente paralela y rozamiento en newtons, con la incerteza de la masa propagada. Sale en la consola y en la pestaña Resumen de la ventana. |
-
-Sobre lo último: el cociente f/N no depende de la masa, porque se simplifica.
-Que dé **exactamente** el mismo μ que se despeja de la cinemática (0,4073 ±
-0,0087 en Tapa 4 libros, incerteza incluida) es el control de que el planteo de
-fuerzas cierra.
+1. Implementar la **regresión lineal global de $\mu_d$** ($g\sin\theta - a = \mu_d \cdot g\cos\theta$) sobre los tres ángulos para cada material, usando los ángulos del agente y comparando contra los del laboratorio.
+2. Pedir al Grupo 3 sus **exports de Tracker** (para el contraste obligatorio), las aclaraciones sobre la altura de 4 libros y, si llegan, videos en **plano horizontal**.
+3. Generar las figuras finales del informe desde los CSV de `resultados/series/` y `resultados/angulo_critico/`.

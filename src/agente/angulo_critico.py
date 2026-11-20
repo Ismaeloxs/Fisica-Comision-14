@@ -73,9 +73,9 @@ OBJETOS_HSV = {
     "tapa": ((98, 180, 90), (118, 255, 255)),
     # amarillo de la esponja: S~180 V~190. La madera tiene S parecida pero V<112
     "esponja": ((17, 120, 140), (30, 255, 255)),
-    # jabon: H 15-19, S 128-164, V 137-166. La pared (S~16) y la mesa (S~33)
-    # quedan afuera por saturacion; el canto de madera, por brillo.
-    "jabon": ((12, 105, 125), (22, 200, 215)),
+    # jabon: rango calibrado con el otro grupo; separa bien de pared (S~16) y
+    # mesa (S~33) por saturacion, y del canto de madera (V<103) por brillo.
+    "jabon": ((14, 95, 105), (21, 157, 246)),
 }
 # area minima de cada mancha, en pixeles a la escala de proceso
 AREA_MIN = {"madera": 1500, "rosa": 400, "objeto": 250}

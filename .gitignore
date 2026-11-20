@@ -15,6 +15,9 @@ datos/*
 !datos/.gitkeep
 # los datos del laboratorio son fuente, no salida generada: van al repo
 !datos/referencia/
+# angulos medidos por el agente (angulos_agente.py): tardan minutos en
+# calcularse, asi que se comparten en vez de que cada uno los regenere
+!datos/agente/
 
 # Videos del laboratorio (Grupo 3) - ~1 GB, se comparten aparte
 *.mp4

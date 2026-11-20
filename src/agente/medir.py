@@ -34,6 +34,7 @@ from tracking import (
     sigma_posicion,
     ventana_deslizamiento,
 )
+import angulos_agente
 import fisica
 from inventario import CARPETA_VIDEOS, OBJETO_A_CLAVE, parsear_nombre
 
@@ -41,6 +42,12 @@ RAIZ = Path(__file__).resolve().parents[2]
 FPS = 120.0
 
 CONDICION_A_ANGULO = {"4libros": "angulo_1", "3libros": "angulo_2", "2libros": "angulo_3"}
+
+# De donde salen el angulo del plano y el mu estatico para la fisica:
+#   "agente":      medidos en los videos (datos/agente/angulos.json, generado
+#                  por angulos_agente.py). Lo que falte cae a laboratorio.
+#   "laboratorio": los del Grupo 3 (datos/referencia/laboratorio.json).
+FUENTE_ANGULOS_DEFAULT = "agente"
 
 
 class ErrorMedicion(RuntimeError):
@@ -82,6 +89,8 @@ class Corrida:
     theta: Any | None
     mu_estatico: Any | None
     diagnostico: Any | None
+    fuente_theta: str = ""
+    fuente_mu_e: str = ""
 
     @property
     def recorrido_cm(self) -> float:
@@ -96,7 +105,49 @@ class Corrida:
         return self.condicion not in CONDICION_A_ANGULO
 
 
-def analizar_corrida(ruta: Path) -> Corrida:
+def angulos_para(
+    ref, archivo: str, objeto: str, condicion: str, fuente: str = FUENTE_ANGULOS_DEFAULT
+) -> tuple[Any, str, Any, str]:
+    """(theta, de donde salio, mu_e, de donde salio) para una corrida.
+
+    Con fuente="agente" usa lo guardado por angulos_agente.py; lo que no este
+    (archivo sin generar, jabon, angulo critico) cae a laboratorio.json y la
+    descripcion lo dice.
+    """
+    lab_theta = (
+        ref.angulo_rad(CONDICION_A_ANGULO[condicion]) if condicion in CONDICION_A_ANGULO else None
+    )
+    lab_mu = ref.mu_estatico(OBJETO_A_CLAVE[objeto])
+    desc_lab_theta = "laboratorio: asin(h / 42 cm) con la altura anotada por el Grupo 3"
+    desc_lab_mu = "laboratorio: tan(asin(h_c / 42 cm)) con la altura anotada por el Grupo 3"
+
+    if fuente != "agente":
+        return lab_theta, desc_lab_theta, lab_mu, desc_lab_mu
+
+    ag = angulos_agente.cargar()
+    if ag is None:
+        aviso = " [no hay datos/agente/angulos.json: correr angulos_agente.py]"
+        return lab_theta, desc_lab_theta + aviso, lab_mu, desc_lab_mu + aviso
+
+    theta, desc_theta = lab_theta, desc_lab_theta
+    if lab_theta is not None:
+        t_ag = ag.angulo_rad(archivo, condicion)
+        if t_ag is not None:
+            theta, desc_theta = t_ag, ag.descripcion_angulo(archivo, condicion)
+        else:
+            desc_theta += " [el agente no tiene esta condicion]"
+
+    mu, desc_mu = lab_mu, desc_lab_mu
+    m_ag = ag.mu_estatico(objeto)
+    if m_ag is not None:
+        mu, desc_mu = m_ag, ag.descripcion_mu_e(objeto)
+    else:
+        motivo = ag.datos.get("criticos", {}).get(objeto, {}).get("motivo", "no medido")
+        desc_mu += f" [el agente no lo mide: {motivo}]"
+    return theta, desc_theta, mu, desc_mu
+
+
+def analizar_corrida(ruta: Path, fuente_angulos: str = FUENTE_ANGULOS_DEFAULT) -> Corrida:
     """Video -> aceleracion y diagnostico. No imprime: devuelve todo."""
     partes = parsear_nombre(ruta)
     if partes is None:
@@ -152,12 +203,9 @@ def analizar_corrida(ruta: Path) -> Corrida:
     a_final = ufloat(a.n, math.hypot(a.s, abs(a.n) * rel_escala))
 
     # --- 5. fisica ---
-    theta = (
-        ref.angulo_rad(CONDICION_A_ANGULO[condicion])
-        if condicion in CONDICION_A_ANGULO
-        else None
+    theta, fuente_theta, mu_e, fuente_mu_e = angulos_para(
+        ref, ruta.name, objeto, condicion, fuente_angulos
     )
-    mu_e = ref.mu_estatico(OBJETO_A_CLAVE[objeto])
     masa = ref.objetos[OBJETO_A_CLAVE[objeto]].masa_kg
     diag = (
         fisica.diagnosticar(a_final, theta, mu_e, masa) if theta is not None else None
@@ -187,6 +235,8 @@ def analizar_corrida(ruta: Path) -> Corrida:
         theta=theta,
         mu_estatico=mu_e,
         diagnostico=diag,
+        fuente_theta=fuente_theta,
+        fuente_mu_e=fuente_mu_e,
     )
 
 
@@ -229,7 +279,12 @@ def informe_texto(c: Corrida) -> str:
         f"  a por diferencias = {np.median(cin.a_filtrada):.3f} m/s^2 (mediana, filtrada)",
     ]
     if c.diagnostico is not None:
-        lineas += ["\nFISICA", fisica.informe(c.diagnostico)]
+        lineas += [
+            "\nFISICA",
+            f"  angulo del plano de: {c.fuente_theta}",
+            f"  mu estatico de:      {c.fuente_mu_e}",
+            fisica.informe(c.diagnostico),
+        ]
     return "\n".join(lineas)
 
 
@@ -249,6 +304,10 @@ def resumen_dict(c: Corrida) -> dict:
         "aceleracion": [c.aceleracion.n, c.aceleracion.s],
         "residuo_rms_mm": 1000 * c.cin.residuo_rms,
         "chi2_reducido": c.cin.chi2_reducido,
+        "theta_grados": [math.degrees(c.theta.n), math.degrees(c.theta.s)] if c.theta is not None else None,
+        "fuente_theta": c.fuente_theta,
+        "mu_estatico": [c.mu_estatico.n, c.mu_estatico.s] if c.mu_estatico is not None else None,
+        "fuente_mu_estatico": c.fuente_mu_e,
         "mu_d_si_desliza": [diag.mu_d_si_desliza.n, diag.mu_d_si_desliza.s] if diag else None,
         "masa_kg": [c.masa_kg.n, c.masa_kg.s],
         "fuerzas_N": (
@@ -336,8 +395,13 @@ def guardar_csv(c: Corrida, destino: Path | None = None) -> Path:
     return destino
 
 
-def medir(ruta: Path, verbose: bool = True, ruta_csv: Path | None = None) -> dict:
-    corrida = analizar_corrida(ruta)
+def medir(
+    ruta: Path,
+    verbose: bool = True,
+    ruta_csv: Path | None = None,
+    fuente_angulos: str = FUENTE_ANGULOS_DEFAULT,
+) -> dict:
+    corrida = analizar_corrida(ruta, fuente_angulos)
     archivo_csv = guardar_csv(corrida, ruta_csv)
     if verbose:
         print(informe_texto(corrida))
@@ -357,6 +421,12 @@ def main() -> None:
         type=Path,
         help="ruta donde guardar el CSV con la serie temporal (por defecto resultados/series/<video>.csv)",
     )
+    p.add_argument(
+        "--angulos",
+        choices=["agente", "laboratorio"],
+        default=FUENTE_ANGULOS_DEFAULT,
+        help="de donde sacar el angulo del plano y el mu estatico (default: agente)",
+    )
     args = p.parse_args()
 
     ruta = args.carpeta / args.video
@@ -364,7 +434,7 @@ def main() -> None:
         raise SystemExit(f"No existe: {ruta}")
 
     try:
-        resultado = medir(ruta, ruta_csv=args.csv)
+        resultado = medir(ruta, ruta_csv=args.csv, fuente_angulos=args.angulos)
     except ErrorMedicion as e:
         raise SystemExit(str(e)) from e
 

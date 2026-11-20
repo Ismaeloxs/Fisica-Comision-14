@@ -40,7 +40,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
 from inventario import CARPETA_VIDEOS, parsear_nombre  # noqa: E402
-from medir import ErrorMedicion, analizar_corrida, guardar_csv, informe_texto  # noqa: E402
+from medir import (  # noqa: E402
+    FUENTE_ANGULOS_DEFAULT,
+    ErrorMedicion,
+    analizar_corrida,
+    guardar_csv,
+    informe_texto,
+)
 
 FONDO = "#f4f4f6"
 TARJETA = "#ffffff"
@@ -67,6 +73,7 @@ MIN_RECORRIDO_CM = 10.0
 
 OBJETOS = ["todos", "tapa", "esponja", "jabon"]
 CONDICIONES = ["todas", "4libros", "3libros", "2libros", "angulo critico"]
+FUENTES_ANGULOS = ["agente", "laboratorio"]
 
 
 def _color_veredicto(veredicto: str) -> tuple[str, str]:
@@ -110,9 +117,9 @@ def angulo_trayectoria(c) -> float:
     return math.atan2(u[1], u[0])
 
 
-def _medir_en_hilo(ruta: Path) -> Medida:
+def _medir_en_hilo(ruta: Path, fuente_angulos: str = FUENTE_ANGULOS_DEFAULT) -> Medida:
     try:
-        corrida = analizar_corrida(ruta)
+        corrida = analizar_corrida(ruta, fuente_angulos=fuente_angulos)
         guardar_csv(corrida)
     except ErrorMedicion as e:
         return Medida(None, None, error=str(e), nombre=ruta.name)
@@ -274,6 +281,14 @@ class Visor(tk.Tk):
             combo = ttk.Combobox(fila, textvariable=var, values=valores, state="readonly")
             combo.pack(side="left", fill="x", expand=True)
             combo.bind("<<ComboboxSelected>>", lambda _e: self._refrescar_lista())
+
+        self.var_angulos = tk.StringVar(value=FUENTE_ANGULOS_DEFAULT)
+        fila_ang = ttk.Frame(filtros)
+        fila_ang.pack(fill="x", pady=2)
+        ttk.Label(fila_ang, text="Angulos", width=10).pack(side="left")
+        ttk.Combobox(
+            fila_ang, textvariable=self.var_angulos, values=FUENTES_ANGULOS, state="readonly"
+        ).pack(side="left", fill="x", expand=True)
 
         self.lista = tk.Listbox(
             panel,
@@ -485,10 +500,11 @@ class Visor(tk.Tk):
             messagebox.showinfo("Sin seleccion", "Elegi un video de la lista.")
             return
         ruta = self.videos[seleccion[0]]
-        self._ocupar(True, f"Midiendo {ruta.name} ...")
+        fuente = self.var_angulos.get()
+        self._ocupar(True, f"Midiendo {ruta.name} (angulos: {fuente}) ...")
 
         def trabajo() -> None:
-            self.cola.put(("corrida", _medir_en_hilo(ruta)))
+            self.cola.put(("corrida", _medir_en_hilo(ruta, fuente)))
 
         threading.Thread(target=trabajo, daemon=True).start()
 
@@ -515,12 +531,13 @@ class Visor(tk.Tk):
         self.fig_lote.clear()
         self.canvas_lote.draw()
         self.pestanias.select(self.tab_lote)
-        self._ocupar(True, f"Midiendo {len(rutas)} videos ...")
+        fuente = self.var_angulos.get()
+        self._ocupar(True, f"Midiendo {len(rutas)} videos (angulos: {fuente}) ...")
 
         def trabajo() -> None:
             for i, ruta in enumerate(rutas, 1):
                 self.cola.put(("progreso", f"Midiendo {i}/{len(rutas)}: {ruta.name}"))
-                self.cola.put(("lote_fila", _medir_en_hilo(ruta)))
+                self.cola.put(("lote_fila", _medir_en_hilo(ruta, fuente)))
             self.cola.put(("lote_fin", None))
 
         threading.Thread(target=trabajo, daemon=True).start()
@@ -649,6 +666,7 @@ class Visor(tk.Tk):
                 "mejor hipotesis de rodadura",
                 f"{mejor[0]}: {mejor[1][0].n:.3f} m/s² ({mejor[1][1]:.1f}σ)",
             )
+            fis.nota(f"Angulo: {c.fuente_theta}.\nmu estatico: {c.fuente_mu_e}.")
         fis.grid(row=1, column=1, sticky="nsew", padx=(6, 0))
 
         libre = Tarjeta(grilla, "Diagrama de cuerpo libre")

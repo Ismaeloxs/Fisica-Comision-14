@@ -1,0 +1,135 @@
+{
+  "_version": 1,
+  "_generado": "2026-11-20T17:55:39",
+  "_nota": "Generado por src/agente/angulos_agente.py. NO editar a mano: volver a correr el script. Angulos aparentes en la imagen, en grados.",
+  "condiciones": {
+    "4libros": {
+      "theta_grados": 32.56508000000001,
+      "sigma_grados": 0.4204181748144168,
+      "n": 15,
+      "regla_grupo3_grados": 34.352704726578494,
+      "por_video": {
+        "Esponja 4Libros Video1.mp4": 32.597,
+        "Esponja 4Libros Video2.mp4": 32.6551,
+        "Esponja 4Libros Video3.mp4": 32.125,
+        "Esponja 4Libros Video4.mp4": 32.9494,
+        "Esponja 4Libros Video5.mp4": 32.1632,
+        "Jabon 4Libros Video1.mp4": 32.3997,
+        "Jabon 4Libros Video2.mp4": 32.5217,
+        "Jabon 4Libros Video3.mp4": 32.3921,
+        "Jabon 4Libros Video4.mp4": 32.2479,
+        "Jabon 4Libros Video5.mp4": 32.7336,
+        "Tapa 4Libros Video1.mp4": 33.2265,
+        "Tapa 4Libros Video2.mp4": 31.6956,
+        "Tapa 4Libros Video3.mp4": 32.6761,
+        "Tapa 4Libros Video4.mp4": 32.8178,
+        "Tapa 4Libros Video5.mp4": 33.2755
+      }
+    },
+    "3libros": {
+      "theta_grados": 23.71907333333333,
+      "sigma_grados": 0.20038126326247865,
+      "n": 15,
+      "regla_grupo3_grados": 24.624318352164078,
+      "por_video": {
+        "Esponja 3Libros Video1.mp4": 23.6962,
+        "Esponja 3Libros Video2.mp4": 23.6825,
+        "Esponja 3Libros Video3.mp4": 23.6941,
+        "Esponja 3Libros Video4.mp4": 23.6918,
+        "Esponja 3Libros Video5.mp4": 23.72,
+        "Jabon 3Libros Video1.mp4": 23.7464,
+        "Jabon 3Libros Video2.mp4": 23.7785,
+        "Jabon 3Libros Video3.mp4": 23.5036,
+        "Jabon 3Libros Video4.mp4": 23.2034,
+        "Jabon 3Libros Video5.mp4": 24.194,
+        "Tapa 3Libros Video1.mp4": 23.7998,
+        "Tapa 3Libros Video2.mp4": 23.7701,
+        "Tapa 3Libros Video3.mp4": 23.7793,
+        "Tapa 3Libros Video4.mp4": 23.7697,
+        "Tapa 3Libros Video5.mp4": 23.7567
+      }
+    },
+    "2libros": {
+      "theta_grados": 20.82886666666667,
+      "sigma_grados": 0.3277245831196561,
+      "n": 15,
+      "regla_grupo3_grados": 20.19633065866908,
+      "por_video": {
+        "Esponja 2Libros Video1.mp4": 20.8653,
+        "Esponja 2Libros Video2.mp4": 21.0782,
+        "Esponja 2Libros Video3.mp4": 21.1301,
+        "Esponja 2Libros Video4.mp4": 20.8875,
+        "Jabon 2Libros Video1.mp4": 21.1269,
+        "Jabon 2Libros Video2.mp4": 20.8257,
+        "Jabon 2Libros Video3.mp4": 20.2073,
+        "Jabon 2Libros Video4.mp4": 20.2566,
+        "Jabon 2Libros Video5.mp4": 21.1642,
+        "Tapa 2Libros Video1.mp4": 20.968,
+        "Tapa 2Libros Video2.mp4": 20.9685,
+        "Tapa 2Libros Video3.mp4": 21.1673,
+        "Tapa 2Libros Video4.mp4": 20.6877,
+        "Tapa 2Libros Video5.mp4": 20.7755,
+        "Tapa 2Libros Video6.mp4": 20.3242
+      }
+    }
+  },
+  "criticos": {
+    "tapa": {
+      "theta_c_grupo3_grados": 16.317053994658067,
+      "sigma_grupo3_grados": 0.1476473005075889,
+      "fuente": "agente",
+      "theta_c_grados": 12.98636,
+      "sigma_grados": 0.27107922568872755,
+      "dispersion_grados": 0.6061515759280021,
+      "n": 5,
+      "mu_e": 0.23061745320963187,
+      "por_video": {
+        "Tapa Angulo Critico Video1.mp4": 13.629,
+        "Tapa Angulo Critico Video2.mp4": 13.1826,
+        "Tapa Angulo Critico Video3.mp4": 12.5521,
+        "Tapa Angulo Critico Video4.mp4": 13.3955,
+        "Tapa Angulo Critico Video5.mp4": 12.1726
+      },
+      "fallas": {}
+    },
+    "esponja": {
+      "theta_c_grupo3_grados": 14.195904848709821,
+      "sigma_grupo3_grados": 0.14488523195896721,
+      "fuente": "agente",
+      "fallas": {},
+      "criterio": "corrimiento (> 0.3 cm)",
+      "theta_c_grados": 12.6054,
+      "sigma_grados": 0.33200687794080413,
+      "dispersion_grados": 0.7423899480731135,
+      "n": 5,
+      "mu_e": 0.22362544176621044,
+      "por_video": {
+        "Esponja Angulo Critico Video1.mp4": 13.3963,
+        "Esponja Angulo Critico Video2.mp4": 12.9794,
+        "Esponja Angulo Critico Video3.mp4": 12.6002,
+        "Esponja Angulo Critico Video4.mp4": 12.6447,
+        "Esponja Angulo Critico Video5.mp4": 11.4064
+      }
+    },
+    "jabon": {
+      "theta_c_grupo3_grados": 17.887129874615137,
+      "sigma_grupo3_grados": 0.14995655498102164,
+      "fuente": "agente",
+      "criterio": "corrimiento (> 0.3 cm) + deslizamiento (> 1 cm/s)",
+      "theta_c_grados": 12.871,
+      "sigma_grados": 0.5361794506817034,
+      "dispersion_grados": 1.3133660647359513,
+      "n": 6,
+      "mu_e": 0.22849794054991127,
+      "por_video": {
+        "Jabon Angulo Critico Video1.mp4": 14.918,
+        "Jabon Angulo Critico Video2.mp4": 13.3296,
+        "Jabon Angulo Critico Video3.mp4": 11.9673,
+        "Jabon Angulo Critico Video4.mp4": 11.0359,
+        "Jabon Angulo Critico Video5.mp4": 12.908,
+        "Jabon Angulo Critico Video6.mp4": 13.0672
+      },
+      "fallas": {}
+    }
+  }
+}
